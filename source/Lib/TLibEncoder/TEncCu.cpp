@@ -66,6 +66,12 @@ Void TEncCu::create(UChar uhTotalDepth, UInt uiMaxWidth, UInt uiMaxHeight, Chrom
   m_ppcBestCU      = new TComDataCU*[m_uhTotalDepth-1];
   m_ppcTempCU      = new TComDataCU*[m_uhTotalDepth-1];
 
+  m_uiAlphaDepths = new UInt[m_uhTotalDepth - 1];
+  m_uiBetaDepths  = new UInt[m_uhTotalDepth - 1];
+  m_bRangeDepths  = new Bool[m_uhTotalDepth - 1];
+  m_bAdoptedByC   = new Bool[m_uhTotalDepth - 1];
+  m_uiSizeAlpha   = 0;
+
   m_ppcPredYuvBest = new TComYuv*[m_uhTotalDepth-1];
   m_ppcResiYuvBest = new TComYuv*[m_uhTotalDepth-1];
   m_ppcRecoYuvBest = new TComYuv*[m_uhTotalDepth-1];
@@ -162,6 +168,27 @@ Void TEncCu::destroy()
     m_ppcTempCU = NULL;
   }
 
+  if (m_uiAlphaDepths)
+  {
+    delete[] m_uiAlphaDepths;
+    m_uiAlphaDepths = NULL;
+  }
+  if (m_uiBetaDepths)
+  {
+    delete[] m_uiBetaDepths;
+    m_uiBetaDepths = NULL;
+  }
+  if (m_bRangeDepths)
+  {
+    delete[] m_bRangeDepths;
+    m_bRangeDepths = NULL;
+  }
+  if (m_bAdoptedByC)
+  {
+    delete[] m_bAdoptedByC;
+    m_bAdoptedByC = NULL;
+  }
+
   if(m_ppcPredYuvBest)
   {
     delete [] m_ppcPredYuvBest;
@@ -228,6 +255,31 @@ Void TEncCu::compressCtu( TComDataCU* pCtu )
   // initialize CU data
   m_ppcBestCU[0]->initCtu( pCtu->getPic(), pCtu->getCtuRsAddr() );
   m_ppcTempCU[0]->initCtu( pCtu->getPic(), pCtu->getCtuRsAddr() );
+
+  if ( pCtu->getSlice()->getSliceType() != I_SLICE && m_pcEncCfg->getUseSBD() )
+    // Similiarity Based Decision turned on and not an intra frame
+  {
+    buildGroupAlpha(pCtu);
+    initRangeDepths();
+
+    UInt simLevel = getSimLevel();
+    if (simLevel == 1) // high similarity
+    {
+      performHighSim(pCtu);
+    }
+    else if (simLevel == m_uhTotalDepth - 1) // low
+    {
+      performLowSim();
+    }
+    else if (simLevel == m_uhTotalDepth - 2) // medium-low
+    {
+      performMediumLowSim();
+    }
+    else // medium-high
+    {
+      performMediumHighSim(pCtu);
+    }
+  }
 
   // analysis of CU
   DEBUG_STRING_NEW(sDebug)
@@ -368,7 +420,10 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
   // get Original YUV data from picture
   m_ppcOrigYuv[uiDepth]->copyFromPicYuv( pcPic->getPicYuvOrg(), rpcBestCU->getCtuRsAddr(), rpcBestCU->getZorderIdxInCtu() );
 
-    // variable for Early CU determination
+  // variable for Similarity Based Decision by R. Fan
+  Bool    bSBD = ((m_pcEncCfg->getUseSBD() && m_bRangeDepths[uiDepth] && rpcBestCU->getSlice()->getSliceType() != I_SLICE) || !m_pcEncCfg->getUseSBD()) ? true : false;
+
+  // variable for Early CU determination
   Bool    bSubBranch = true;
 
   // variable for Cbf fast mode PU decision
@@ -425,258 +480,262 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
   if ( ( uiRPelX < rpcBestCU->getSlice()->getSPS()->getPicWidthInLumaSamples() ) &&
        ( uiBPelY < rpcBestCU->getSlice()->getSPS()->getPicHeightInLumaSamples() ) )
   {
-    for (Int iQP=iMinQP; iQP<=iMaxQP; iQP++)
+    if (bSBD)
+      // Similarity Based Decision is turned on, perform required inter/intra/SKIP modes
     {
-      const Bool bIsLosslessMode = isAddLowestQP && (iQP == iMinQP);
-
-      if (bIsLosslessMode)
+      for (Int iQP = iMinQP; iQP <= iMaxQP; iQP++)
       {
-        iQP = lowestQP;
-      }
-
-      m_ChromaQpAdjIdc = 0;
-      if (pcSlice->getUseChromaQpAdj())
-      {
-        /* Pre-estimation of chroma QP based on input block activity may be performed
-         * here, using for example m_ppcOrigYuv[uiDepth] */
-        /* To exercise the current code, the index used for adjustment is based on
-         * block position
-         */
-        Int lgMinCuSize = pcSlice->getSPS()->getLog2MinCodingBlockSize();
-        m_ChromaQpAdjIdc = ((uiLPelX >> lgMinCuSize) + (uiTPelY >> lgMinCuSize)) % (pcSlice->getPPS()->getChromaQpAdjTableSize() + 1);
-      }
-
-      rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-
-      // do inter modes, SKIP and 2Nx2N
-      if( rpcBestCU->getSlice()->getSliceType() != I_SLICE )
-      {
-        // 2Nx2N
-        if(m_pcEncCfg->getUseEarlySkipDetection())
-        {
-          xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2Nx2N DEBUG_STRING_PASS_INTO(sDebug) );
-          rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );//by Competition for inter_2Nx2N
-        }
-        // SKIP
-        xCheckRDCostMerge2Nx2N( rpcBestCU, rpcTempCU DEBUG_STRING_PASS_INTO(sDebug), &earlyDetectionSkipMode );//by Merge for inter_2Nx2N
-        rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-
-        if(!m_pcEncCfg->getUseEarlySkipDetection())
-        {
-          // 2Nx2N, NxN
-          xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2Nx2N DEBUG_STRING_PASS_INTO(sDebug) );
-          rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-          if(m_pcEncCfg->getUseCbfFastMode())
-          {
-            doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
-          }
-        }
-      }
-
-      if (bIsLosslessMode) // Restore loop variable if lossless mode was searched.
-      {
-        iQP = iMinQP;
-      }
-    }
-
-    if(!earlyDetectionSkipMode)
-    {
-      for (Int iQP=iMinQP; iQP<=iMaxQP; iQP++)
-      {
-        const Bool bIsLosslessMode = isAddLowestQP && (iQP == iMinQP); // If lossless, then iQP is irrelevant for subsequent modules.
+        const Bool bIsLosslessMode = isAddLowestQP && (iQP == iMinQP);
 
         if (bIsLosslessMode)
         {
           iQP = lowestQP;
         }
 
-        rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-
-        // do inter modes, NxN, 2NxN, and Nx2N
-        if( rpcBestCU->getSlice()->getSliceType() != I_SLICE )
+        m_ChromaQpAdjIdc = 0;
+        if (pcSlice->getUseChromaQpAdj())
         {
-          // 2Nx2N, NxN
-          if(!( (rpcBestCU->getWidth(0)==8) && (rpcBestCU->getHeight(0)==8) ))
-          {
-            if( uiDepth == g_uiMaxCUDepth - g_uiAddCUDepth && doNotBlockPu)
-            {
-              xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_NxN DEBUG_STRING_PASS_INTO(sDebug)   );
-              rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-            }
-          }
-
-          if(doNotBlockPu)
-          {
-            xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_Nx2N DEBUG_STRING_PASS_INTO(sDebug)  );
-            rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-            if(m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_Nx2N )
-            {
-              doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
-            }
-          }
-          if(doNotBlockPu)
-          {
-            xCheckRDCostInter      ( rpcBestCU, rpcTempCU, SIZE_2NxN DEBUG_STRING_PASS_INTO(sDebug)  );
-            rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-            if(m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_2NxN)
-            {
-              doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
-            }
-          }
-
-          //! Try AMP (SIZE_2NxnU, SIZE_2NxnD, SIZE_nLx2N, SIZE_nRx2N)
-          if( pcPic->getSlice(0)->getSPS()->getAMPAcc(uiDepth) )
-          {
-#if AMP_ENC_SPEEDUP
-            Bool bTestAMP_Hor = false, bTestAMP_Ver = false;
-
-#if AMP_MRG
-            Bool bTestMergeAMP_Hor = false, bTestMergeAMP_Ver = false;
-
-            deriveTestModeAMP (rpcBestCU, eParentPartSize, bTestAMP_Hor, bTestAMP_Ver, bTestMergeAMP_Hor, bTestMergeAMP_Ver);
-#else
-            deriveTestModeAMP (rpcBestCU, eParentPartSize, bTestAMP_Hor, bTestAMP_Ver);
-#endif
-
-            //! Do horizontal AMP
-            if ( bTestAMP_Hor )
-            {
-              if(doNotBlockPu)
-              {
-                xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2NxnU DEBUG_STRING_PASS_INTO(sDebug) );
-                rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-                if(m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_2NxnU )
-                {
-                  doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
-                }
-              }
-              if(doNotBlockPu)
-              {
-                xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2NxnD DEBUG_STRING_PASS_INTO(sDebug) );
-                rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-                if(m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_2NxnD )
-                {
-                  doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
-                }
-              }
-            }
-#if AMP_MRG
-            else if ( bTestMergeAMP_Hor )
-            {
-              if(doNotBlockPu)
-              {
-                xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2NxnU DEBUG_STRING_PASS_INTO(sDebug), true );
-                rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-                if(m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_2NxnU )
-                {
-                  doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
-                }
-              }
-              if(doNotBlockPu)
-              {
-                xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2NxnD DEBUG_STRING_PASS_INTO(sDebug), true );
-                rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-                if(m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_2NxnD )
-                {
-                  doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
-                }
-              }
-            }
-#endif
-
-            //! Do horizontal AMP
-            if ( bTestAMP_Ver )
-            {
-              if(doNotBlockPu)
-              {
-                xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_nLx2N DEBUG_STRING_PASS_INTO(sDebug) );
-                rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-                if(m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_nLx2N )
-                {
-                  doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
-                }
-              }
-              if(doNotBlockPu)
-              {
-                xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_nRx2N DEBUG_STRING_PASS_INTO(sDebug) );
-                rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-              }
-            }
-#if AMP_MRG
-            else if ( bTestMergeAMP_Ver )
-            {
-              if(doNotBlockPu)
-              {
-                xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_nLx2N DEBUG_STRING_PASS_INTO(sDebug), true );
-                rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-                if(m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_nLx2N )
-                {
-                  doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
-                }
-              }
-              if(doNotBlockPu)
-              {
-                xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_nRx2N DEBUG_STRING_PASS_INTO(sDebug), true );
-                rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-              }
-            }
-#endif
-
-#else
-            xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2NxnU );
-            rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-            xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2NxnD );
-            rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-            xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_nLx2N );
-            rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-
-            xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_nRx2N );
-            rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-
-#endif
-          }
+          /* Pre-estimation of chroma QP based on input block activity may be performed
+           * here, using for example m_ppcOrigYuv[uiDepth] */
+          /* To exercise the current code, the index used for adjustment is based on
+           * block position
+           */
+          Int lgMinCuSize = pcSlice->getSPS()->getLog2MinCodingBlockSize();
+          m_ChromaQpAdjIdc = ((uiLPelX >> lgMinCuSize) + (uiTPelY >> lgMinCuSize)) % (pcSlice->getPPS()->getChromaQpAdjTableSize() + 1);
         }
 
-        // do normal intra modes
-        // speedup for inter frames
-        Double intraCost = 0.0;
+        rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
 
-        if((rpcBestCU->getSlice()->getSliceType() == I_SLICE)                                     ||
-           (rpcBestCU->getCbf( 0, COMPONENT_Y  ) != 0)                                            ||
-          ((rpcBestCU->getCbf( 0, COMPONENT_Cb ) != 0) && (numberValidComponents > COMPONENT_Cb)) ||
-          ((rpcBestCU->getCbf( 0, COMPONENT_Cr ) != 0) && (numberValidComponents > COMPONENT_Cr))  ) // avoid very complex intra if it is unlikely
+        // do inter modes, SKIP and 2Nx2N
+        if (rpcBestCU->getSlice()->getSliceType() != I_SLICE)
         {
-          xCheckRDCostIntra( rpcBestCU, rpcTempCU, intraCost, SIZE_2Nx2N DEBUG_STRING_PASS_INTO(sDebug) );
-          rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-          if( uiDepth == g_uiMaxCUDepth - g_uiAddCUDepth )
+          // 2Nx2N
+          if (m_pcEncCfg->getUseEarlySkipDetection())
           {
-            if( rpcTempCU->getWidth(0) > ( 1 << rpcTempCU->getSlice()->getSPS()->getQuadtreeTULog2MinSize() ) )
-            {
-              Double tmpIntraCost;
-              xCheckRDCostIntra( rpcBestCU, rpcTempCU, tmpIntraCost, SIZE_NxN DEBUG_STRING_PASS_INTO(sDebug)   );
-              intraCost = std::min(intraCost, tmpIntraCost);
-              rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-            }
+            xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_2Nx2N DEBUG_STRING_PASS_INTO(sDebug));
+            rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);//by Competition for inter_2Nx2N
           }
-        }
+          // SKIP
+          xCheckRDCostMerge2Nx2N(rpcBestCU, rpcTempCU DEBUG_STRING_PASS_INTO(sDebug), &earlyDetectionSkipMode);//by Merge for inter_2Nx2N
+          rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
 
-        // test PCM
-        if(pcPic->getSlice(0)->getSPS()->getUsePCM()
-          && rpcTempCU->getWidth(0) <= (1<<pcPic->getSlice(0)->getSPS()->getPCMLog2MaxSize())
-          && rpcTempCU->getWidth(0) >= (1<<pcPic->getSlice(0)->getSPS()->getPCMLog2MinSize()) )
-        {
-          UInt uiRawBits = getTotalBits(rpcBestCU->getWidth(0), rpcBestCU->getHeight(0), rpcBestCU->getPic()->getChromaFormat(), g_bitDepth);
-          UInt uiBestBits = rpcBestCU->getTotalBits();
-          if((uiBestBits > uiRawBits) || (rpcBestCU->getTotalCost() > m_pcRdCost->calcRdCost(uiRawBits, 0)))
+          if (!m_pcEncCfg->getUseEarlySkipDetection())
           {
-            xCheckIntraPCM (rpcBestCU, rpcTempCU);
-            rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
+            // 2Nx2N, NxN
+            xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_2Nx2N DEBUG_STRING_PASS_INTO(sDebug));
+            rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+            if (m_pcEncCfg->getUseCbfFastMode())
+            {
+              doNotBlockPu = rpcBestCU->getQtRootCbf(0) != 0;
+            }
           }
         }
 
         if (bIsLosslessMode) // Restore loop variable if lossless mode was searched.
         {
           iQP = iMinQP;
+        }
+      }
+
+      if (!earlyDetectionSkipMode)
+      {
+        for (Int iQP = iMinQP; iQP <= iMaxQP; iQP++)
+        {
+          const Bool bIsLosslessMode = isAddLowestQP && (iQP == iMinQP); // If lossless, then iQP is irrelevant for subsequent modules.
+
+          if (bIsLosslessMode)
+          {
+            iQP = lowestQP;
+          }
+
+          rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+
+          // do inter modes, NxN, 2NxN, and Nx2N
+          if (rpcBestCU->getSlice()->getSliceType() != I_SLICE)
+          {
+            // 2Nx2N, NxN
+            if (!((rpcBestCU->getWidth(0) == 8) && (rpcBestCU->getHeight(0) == 8)))
+            {
+              if (uiDepth == g_uiMaxCUDepth - g_uiAddCUDepth && doNotBlockPu)
+              {
+                xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_NxN DEBUG_STRING_PASS_INTO(sDebug));
+                rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+              }
+            }
+
+            if (doNotBlockPu)
+            {
+              xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_Nx2N DEBUG_STRING_PASS_INTO(sDebug));
+              rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+              if (m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_Nx2N)
+              {
+                doNotBlockPu = rpcBestCU->getQtRootCbf(0) != 0;
+              }
+            }
+            if (doNotBlockPu)
+            {
+              xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_2NxN DEBUG_STRING_PASS_INTO(sDebug));
+              rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+              if (m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_2NxN)
+              {
+                doNotBlockPu = rpcBestCU->getQtRootCbf(0) != 0;
+              }
+            }
+
+            //! Try AMP (SIZE_2NxnU, SIZE_2NxnD, SIZE_nLx2N, SIZE_nRx2N)
+            if (pcPic->getSlice(0)->getSPS()->getAMPAcc(uiDepth))
+            {
+#if AMP_ENC_SPEEDUP
+              Bool bTestAMP_Hor = false, bTestAMP_Ver = false;
+
+#if AMP_MRG
+              Bool bTestMergeAMP_Hor = false, bTestMergeAMP_Ver = false;
+
+              deriveTestModeAMP(rpcBestCU, eParentPartSize, bTestAMP_Hor, bTestAMP_Ver, bTestMergeAMP_Hor, bTestMergeAMP_Ver);
+#else
+              deriveTestModeAMP (rpcBestCU, eParentPartSize, bTestAMP_Hor, bTestAMP_Ver);
+#endif
+
+              //! Do horizontal AMP
+              if (bTestAMP_Hor)
+              {
+                if (doNotBlockPu)
+                {
+                  xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_2NxnU DEBUG_STRING_PASS_INTO(sDebug));
+                  rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+                  if (m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_2NxnU)
+                  {
+                    doNotBlockPu = rpcBestCU->getQtRootCbf(0) != 0;
+                  }
+                }
+                if (doNotBlockPu)
+                {
+                  xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_2NxnD DEBUG_STRING_PASS_INTO(sDebug));
+                  rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+                  if (m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_2NxnD)
+                  {
+                    doNotBlockPu = rpcBestCU->getQtRootCbf(0) != 0;
+                  }
+                }
+              }
+#if AMP_MRG
+              else if (bTestMergeAMP_Hor)
+              {
+                if (doNotBlockPu)
+                {
+                  xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_2NxnU DEBUG_STRING_PASS_INTO(sDebug), true);
+                  rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+                  if (m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_2NxnU)
+                  {
+                    doNotBlockPu = rpcBestCU->getQtRootCbf(0) != 0;
+                  }
+                }
+                if (doNotBlockPu)
+                {
+                  xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_2NxnD DEBUG_STRING_PASS_INTO(sDebug), true);
+                  rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+                  if (m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_2NxnD)
+                  {
+                    doNotBlockPu = rpcBestCU->getQtRootCbf(0) != 0;
+                  }
+                }
+              }
+#endif
+
+              //! Do horizontal AMP
+              if (bTestAMP_Ver)
+              {
+                if (doNotBlockPu)
+                {
+                  xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_nLx2N DEBUG_STRING_PASS_INTO(sDebug));
+                  rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+                  if (m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_nLx2N)
+                  {
+                    doNotBlockPu = rpcBestCU->getQtRootCbf(0) != 0;
+                  }
+                }
+                if (doNotBlockPu)
+                {
+                  xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_nRx2N DEBUG_STRING_PASS_INTO(sDebug));
+                  rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+                }
+              }
+#if AMP_MRG
+              else if (bTestMergeAMP_Ver)
+              {
+                if (doNotBlockPu)
+                {
+                  xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_nLx2N DEBUG_STRING_PASS_INTO(sDebug), true);
+                  rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+                  if (m_pcEncCfg->getUseCbfFastMode() && rpcBestCU->getPartitionSize(0) == SIZE_nLx2N)
+                  {
+                    doNotBlockPu = rpcBestCU->getQtRootCbf(0) != 0;
+                  }
+                }
+                if (doNotBlockPu)
+                {
+                  xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_nRx2N DEBUG_STRING_PASS_INTO(sDebug), true);
+                  rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+                }
+              }
+#endif
+
+#else
+              xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2NxnU );
+              rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
+              xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2NxnD );
+              rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
+              xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_nLx2N );
+              rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
+
+              xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_nRx2N );
+              rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
+
+#endif
+            }
+          }
+
+          // do normal intra modes
+          // speedup for inter frames
+          Double intraCost = 0.0;
+
+          if ((rpcBestCU->getSlice()->getSliceType() == I_SLICE) ||
+            (rpcBestCU->getCbf(0, COMPONENT_Y) != 0) ||
+            ((rpcBestCU->getCbf(0, COMPONENT_Cb) != 0) && (numberValidComponents > COMPONENT_Cb)) ||
+            ((rpcBestCU->getCbf(0, COMPONENT_Cr) != 0) && (numberValidComponents > COMPONENT_Cr))) // avoid very complex intra if it is unlikely
+          {
+            xCheckRDCostIntra(rpcBestCU, rpcTempCU, intraCost, SIZE_2Nx2N DEBUG_STRING_PASS_INTO(sDebug));
+            rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+            if (uiDepth == g_uiMaxCUDepth - g_uiAddCUDepth)
+            {
+              if (rpcTempCU->getWidth(0) > (1 << rpcTempCU->getSlice()->getSPS()->getQuadtreeTULog2MinSize()))
+              {
+                Double tmpIntraCost;
+                xCheckRDCostIntra(rpcBestCU, rpcTempCU, tmpIntraCost, SIZE_NxN DEBUG_STRING_PASS_INTO(sDebug));
+                intraCost = std::min(intraCost, tmpIntraCost);
+                rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+              }
+            }
+          }
+
+          // test PCM
+          if (pcPic->getSlice(0)->getSPS()->getUsePCM()
+            && rpcTempCU->getWidth(0) <= (1 << pcPic->getSlice(0)->getSPS()->getPCMLog2MaxSize())
+            && rpcTempCU->getWidth(0) >= (1 << pcPic->getSlice(0)->getSPS()->getPCMLog2MinSize()))
+          {
+            UInt uiRawBits = getTotalBits(rpcBestCU->getWidth(0), rpcBestCU->getHeight(0), rpcBestCU->getPic()->getChromaFormat(), g_bitDepth);
+            UInt uiBestBits = rpcBestCU->getTotalBits();
+            if ((uiBestBits > uiRawBits) || (rpcBestCU->getTotalCost() > m_pcRdCost->calcRdCost(uiRawBits, 0)))
+            {
+              xCheckIntraPCM(rpcBestCU, rpcTempCU);
+              rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+            }
+          }
+
+          if (bIsLosslessMode) // Restore loop variable if lossless mode was searched.
+          {
+            iQP = iMinQP;
+          }
         }
       }
     }
@@ -1646,4 +1705,753 @@ Void TEncCu::xCtuCollectARLStats(TComDataCU* pCtu )
   m_pcTrQuant->getSliceNSamples()[LEVEL_RANGE] += numSamples[ LEVEL_RANGE ] ;
 }
 #endif
+
+
+/** Determines which depth are adopted by the Left neighbour CTU
+*\param   pcCu
+*\param   bAdoptedCUDepths
+*\param   R
+*\returns Void
+*/
+Void TEncCu::getAdoptedDepthsLeft(TComDataCU* pcCU, Bool* bAdoptedCUDepths, UInt R)
+{
+  // initialize
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    bAdoptedCUDepths[ui] = false;
+  }
+
+  TComDataCU* leftCU = pcCU->getCtuLeft();
+  if (leftCU == NULL)
+  {
+    return;
+  }
+
+  if (R == 8)
+  {
+    bAdoptedCUDepths[leftCU->getDepth(84)] = true;
+    bAdoptedCUDepths[leftCU->getDepth(92)] = true;
+    bAdoptedCUDepths[leftCU->getDepth(116)] = true;
+    bAdoptedCUDepths[leftCU->getDepth(124)] = true;
+    bAdoptedCUDepths[leftCU->getDepth(212)] = true;
+    bAdoptedCUDepths[leftCU->getDepth(220)] = true;
+    bAdoptedCUDepths[leftCU->getDepth(244)] = true;
+    bAdoptedCUDepths[leftCU->getDepth(252)] = true;
+  }
+  else if (R == 16)
+  {
+    for (UInt uj = 80; uj < 144; uj = uj + 32)
+    {
+      for (UInt ui = 0; ui < 16; ui = ui + 4)
+      {
+        bAdoptedCUDepths[leftCU->getDepth(uj + ui)] = true;
+      }
+    }
+    for (UInt uj = 208; uj < 272; uj = uj + 32)
+    {
+      for (UInt ui = 0; ui < 16; ui = ui + 4)
+      {
+        bAdoptedCUDepths[leftCU->getDepth(uj + ui)] = true;
+      }
+    }
+  }
+  else if (R == 32)
+  {
+    for (UInt uj = 64; uj < 320; uj = uj + 128)
+    {
+      for (UInt ui = 0; ui < 64; ui = ui + 4)
+      {
+        bAdoptedCUDepths[leftCU->getDepth(uj + ui)] = true;
+      }
+    }
+  }
+  else  // R = 64
+  {
+    for (UInt ui = 0; ui < 256; ui = ui + 4)
+    {
+      bAdoptedCUDepths[leftCU->getDepth(ui)] = true;
+    }
+  }
+}
+
+/** Determines which depth are adopted by the Above neighbour CTU
+*\param   pcCu
+*\param   bAdoptedCUDepths
+*\param   R
+*\returns Void
+*/
+Void TEncCu::getAdoptedDepthsAbove(TComDataCU* pcCU, Bool* bAdoptedCUDepths, UInt R)
+{
+  // initialize
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    bAdoptedCUDepths[ui] = false;
+  }
+
+  TComDataCU* aboveCU = pcCU->getCtuAbove();
+  if (aboveCU == NULL)
+  {
+    return;
+  }
+
+  if (R == 8)
+  {
+    bAdoptedCUDepths[aboveCU->getDepth(168)] = true;
+    bAdoptedCUDepths[aboveCU->getDepth(172)] = true;
+    bAdoptedCUDepths[aboveCU->getDepth(184)] = true;
+    bAdoptedCUDepths[aboveCU->getDepth(188)] = true;
+    bAdoptedCUDepths[aboveCU->getDepth(232)] = true;
+    bAdoptedCUDepths[aboveCU->getDepth(236)] = true;
+    bAdoptedCUDepths[aboveCU->getDepth(248)] = true;
+    bAdoptedCUDepths[aboveCU->getDepth(252)] = true;
+  }
+  else if (R == 16)
+  {
+    for (UInt uj = 160; uj < 192; uj = uj + 16)
+    {
+      for (UInt ui = 0; ui < 16; ui = ui + 4)
+      {
+        bAdoptedCUDepths[aboveCU->getDepth(uj + ui)] = true;
+      }
+    }
+    for (UInt uj = 224; uj < 256; uj = uj + 16)
+    {
+      for (UInt ui = 0; ui < 16; ui = ui + 4)
+      {
+        bAdoptedCUDepths[aboveCU->getDepth(uj + ui)] = true;
+      }
+    }
+  }
+  else if (R == 32)
+  {
+    for (UInt ui = 128; ui < 256; ui = ui + 4)
+    {
+      bAdoptedCUDepths[aboveCU->getDepth(ui)] = true;
+    }
+  }
+  else  // R = 64
+  {
+    for (UInt ui = 0; ui < 256; ui = ui + 4)
+    {
+      bAdoptedCUDepths[aboveCU->getDepth(ui)] = true;
+    }
+  }
+}
+
+/** Determines which depth are adopted by the Above Left neighbour CTU
+*\param   pcCu
+*\param   bAdoptedCUDepths
+*\param   R
+*\returns Void
+*/
+Void TEncCu::getAdoptedDepthsAboveLeft(TComDataCU* pcCU, Bool* bAdoptedCUDepths, UInt R)
+{
+  // initialize
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    bAdoptedCUDepths[ui] = false;
+  }
+
+  TComDataCU* aboveLeftCU = pcCU->getCtuAboveLeft();
+  if (aboveLeftCU == NULL)
+  {
+    return;
+  }
+
+  if (R == 8)
+  {
+    bAdoptedCUDepths[aboveLeftCU->getDepth(252)] = true;
+  }
+  else if (R == 16)
+  {
+    for (UInt ui = 240; ui < 256; ui = ui + 4)
+    {
+      bAdoptedCUDepths[aboveLeftCU->getDepth(ui)] = true;
+    }
+  }
+  else if (R == 32)
+  {
+    for (UInt ui = 192; ui < 256; ui = ui + 4)
+    {
+      bAdoptedCUDepths[aboveLeftCU->getDepth(ui)] = true;
+    }
+  }
+  else  // R = 64
+  {
+    for (UInt ui = 0; ui < 256; ui = ui + 4)
+    {
+      bAdoptedCUDepths[aboveLeftCU->getDepth(ui)] = true;
+    }
+  }
+
+  memcpy(m_bAdoptedByC, bAdoptedCUDepths, sizeof(Bool)*(m_uhTotalDepth - 1));
+}
+
+/** Determines which depth are adopted by the Above Right neighbour CTU
+*\param   pcCu
+*\param   bAdoptedCUDepths
+*\param   R
+*\returns Void
+*/
+Void TEncCu::getAdoptedDepthsAboveRight(TComDataCU* pcCU, Bool* bAdoptedCUDepths, UInt R)
+{
+  // initialize
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    bAdoptedCUDepths[ui] = false;
+  }
+
+  TComDataCU* aboveRightCU = pcCU->getCtuAboveRight();
+  if (aboveRightCU == NULL)
+  {
+    return;
+  }
+
+  if (R == 8)
+  {
+    bAdoptedCUDepths[aboveRightCU->getDepth(168)] = true;
+  }
+  else if (R == 16)
+  {
+    for (UInt ui = 160; ui < 176; ui = ui + 4)
+    {
+      bAdoptedCUDepths[aboveRightCU->getDepth(ui)] = true;
+    }
+  }
+  else if (R == 32)
+  {
+    for (UInt ui = 128; ui < 192; ui = ui + 4)
+    {
+      bAdoptedCUDepths[aboveRightCU->getDepth(ui)] = true;
+    }
+  }
+  else  // R = 64
+  {
+    for (UInt ui = 0; ui < 256; ui = ui + 4)
+    {
+      bAdoptedCUDepths[aboveRightCU->getDepth(ui)] = true;
+    }
+  }
+}
+
+/** Determines which depth are adopted by the Right neighbour CTU
+*\param   pcCu
+*\param   bAdoptedCUDepths
+*\param   R
+*\returns Void
+*/
+Void TEncCu::getAdoptedDepthsRight(TComDataCU* pcCU, Bool* bAdoptedCUDepths, UInt R)
+{
+  // initialize
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    bAdoptedCUDepths[ui] = false;
+  }
+
+  TComDataCU* rightCU = pcCU->getCtuRight();
+  if (rightCU == NULL)
+  {
+    return;
+  }
+
+  if (R == 8)
+  {
+    bAdoptedCUDepths[rightCU->getDepth(0)] = true;
+    bAdoptedCUDepths[rightCU->getDepth(8)] = true;
+    bAdoptedCUDepths[rightCU->getDepth(32)] = true;
+    bAdoptedCUDepths[rightCU->getDepth(40)] = true;
+    bAdoptedCUDepths[rightCU->getDepth(128)] = true;
+    bAdoptedCUDepths[rightCU->getDepth(136)] = true;
+    bAdoptedCUDepths[rightCU->getDepth(160)] = true;
+    bAdoptedCUDepths[rightCU->getDepth(168)] = true;
+  }
+  else if (R == 16)
+  {
+    for (UInt uj = 0; uj < 48; uj = uj + 32)
+    {
+      for (UInt ui = 0; ui < 16; ui = ui + 4)
+      {
+        bAdoptedCUDepths[rightCU->getDepth(uj + ui)] = true;
+      }
+    }
+    for (UInt uj = 128; uj < 176; uj = uj + 32)
+    {
+      for (UInt ui = 0; ui < 16; ui = ui + 4)
+      {
+        bAdoptedCUDepths[rightCU->getDepth(uj + ui)] = true;
+      }
+    }
+  }
+  else if (R == 32)
+  {
+    for (UInt uj = 0; uj < 192; uj = uj + 128)
+    {
+      for (UInt ui = 0; ui < 64; ui = ui + 4)
+      {
+        bAdoptedCUDepths[rightCU->getDepth(ui)] = true;
+      }
+    }
+  }
+  else  // R = 64
+  {
+    for (UInt ui = 0; ui < 256; ui = ui + 4)
+    {
+      bAdoptedCUDepths[rightCU->getDepth(ui)] = true;
+    }
+  }
+}
+
+/** Determines which depth are adopted by the Bottom neighbour CTU
+*\param   pcCu
+*\param   bAdoptedCUDepths
+*\param   R
+*\returns Void
+*/
+Void TEncCu::getAdoptedDepthsBottom(TComDataCU* pcCU, Bool* bAdoptedCUDepths, UInt R)
+{
+  // initialize
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    bAdoptedCUDepths[ui] = false;
+  }
+
+  TComDataCU* bottomCU = pcCU->getCtuBottom();
+  if (bottomCU == NULL)
+  {
+    return;
+  }
+
+  if (R == 8)
+  {
+    bAdoptedCUDepths[bottomCU->getDepth(0)] = true;
+    bAdoptedCUDepths[bottomCU->getDepth(4)] = true;
+    bAdoptedCUDepths[bottomCU->getDepth(16)] = true;
+    bAdoptedCUDepths[bottomCU->getDepth(20)] = true;
+    bAdoptedCUDepths[bottomCU->getDepth(64)] = true;
+    bAdoptedCUDepths[bottomCU->getDepth(68)] = true;
+    bAdoptedCUDepths[bottomCU->getDepth(80)] = true;
+    bAdoptedCUDepths[bottomCU->getDepth(84)] = true;
+  }
+  else if (R == 16)
+  {
+    for (UInt uj = 0; uj < 32; uj = uj + 16)
+    {
+      for (UInt ui = 0; ui < 16; ui = ui + 4)
+      {
+        bAdoptedCUDepths[bottomCU->getDepth(uj + ui)] = true;
+      }
+    }
+    for (UInt uj = 64; uj < 96; uj = uj + 16)
+    {
+      for (UInt ui = 0; ui < 16; ui = ui + 4)
+      {
+        bAdoptedCUDepths[bottomCU->getDepth(uj + ui)] = true;
+      }
+    }
+  }
+  else if (R == 32)
+  {
+    for (UInt uj = 0; uj < 128; uj = uj + 64)
+    {
+      for (UInt ui = 0; ui < 64; ui = ui + 4)
+      {
+        bAdoptedCUDepths[bottomCU->getDepth(ui)] = true;
+      }
+    }
+  }
+  else  // R = 64
+  {
+    for (UInt ui = 0; ui < 256; ui = ui + 4)
+    {
+      bAdoptedCUDepths[bottomCU->getDepth(ui)] = true;
+    }
+  }
+}
+
+/** Determines which depth are adopted by the previous Colocated CTU
+*\param   pcCu
+*\param   bAdoptedCUDepths
+*\param   R
+*\returns Void
+*/
+Void TEncCu::getAdoptedDepthsColocated(TComDataCU* pcCU, Bool* bAdoptedCUDepths, UInt R)
+{
+  // initialize
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    bAdoptedCUDepths[ui] = false;
+  }
+
+  TComDataCU* colocatedCU = pcCU->getCUColocated(REF_PIC_LIST_0);
+  if (colocatedCU == NULL)
+  {
+    return;
+  }
+
+  for (UInt ui = 0; ui < 256; ui = ui + 4)
+  {
+    bAdoptedCUDepths[colocatedCU->getDepth(ui)] = true;
+  }
+
+  memcpy(m_bAdoptedByColocated, bAdoptedCUDepths, sizeof(Bool)*(m_uhTotalDepth - 1));
+}
+
+/** initiliaze the array that holds the depths adopted by group alpha
+*\returns Void
+*/
+Void TEncCu::initGroupAlpha()
+{
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    m_uiAlphaDepths[ui] = 0;
+    m_bAdoptedByC[ui] = false;
+  }
+
+  m_uiSizeAlpha = 0;
+}
+
+/** updates the depths array of group alpha with data from the last CTU
+*\param   bAdoptedCUDepths
+*\returns Void
+*/
+Void TEncCu::updateGroupAlpha(Bool* bAdoptedCUDepths)
+{
+  bool newAlphaCU = false;
+
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    if (bAdoptedCUDepths[ui] == true)
+    {
+      m_uiAlphaDepths[ui]++; // increase each adopted depth only once for LCU
+      newAlphaCU = true;
+    }
+  }
+
+  if (newAlphaCU)
+  {
+    m_uiSizeAlpha++;
+  }
+}
+
+/** build the array of depths adopted by the basic group alpha with respect to the supplied CTU
+*\param   pcCU
+*\returns Void
+*/
+Void TEncCu::buildGroupAlpha(TComDataCU* pcCU)
+{
+  Bool* bAdoptedCUDepths = new Bool[m_uhTotalDepth - 1];
+  UInt R = m_pcEncCfg->getR();
+  initGroupAlpha();
+
+  getAdoptedDepthsLeft(pcCU, bAdoptedCUDepths, R);
+  updateGroupAlpha(bAdoptedCUDepths);
+  getAdoptedDepthsAbove(pcCU, bAdoptedCUDepths, R);
+  updateGroupAlpha(bAdoptedCUDepths);
+  getAdoptedDepthsAboveLeft(pcCU, bAdoptedCUDepths, R);
+  updateGroupAlpha(bAdoptedCUDepths);
+  getAdoptedDepthsColocated(pcCU, bAdoptedCUDepths, R);
+  updateGroupAlpha(bAdoptedCUDepths);
+
+  delete bAdoptedCUDepths;
+}
+
+/** initiliaze the array that holds the depths adopted by group beta
+*\returns Void
+*/
+Void TEncCu::initGroupBeta()
+{
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    m_uiBetaDepths[ui] = 0;
+  }
+}
+
+/** updates the depths array of group beta with data from the last CTU
+*\param   bAdoptedCUDepths
+*\returns Void
+*/
+Void TEncCu::updateGroupBeta(Bool* bAdoptedCUDepths)
+{
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    if (bAdoptedCUDepths[ui] == true)
+    {
+      m_uiBetaDepths[ui]++; // increase each adopted depth only once for LCU
+    }
+  }
+}
+
+/** build the array of depths adopted by the extended group beta with respect to the supplied CTU
+*\param   pcCU
+*\returns Void
+*/
+Void TEncCu::buildGroupBeta(TComDataCU* pcCU)
+{
+  TComDataCU* pcColocatedCU = pcCU->getCUColocated(REF_PIC_LIST_0);
+  Bool* bAdoptedCUDepths = new Bool[m_uhTotalDepth - 1];
+  UInt R = m_pcEncCfg->getR();
+  initGroupBeta();
+
+  getAdoptedDepthsAboveRight(pcCU, bAdoptedCUDepths, R);
+  updateGroupBeta(bAdoptedCUDepths);
+  getAdoptedDepthsLeft(pcColocatedCU, bAdoptedCUDepths, R);
+  updateGroupBeta(bAdoptedCUDepths);
+  getAdoptedDepthsAbove(pcColocatedCU, bAdoptedCUDepths, R);
+  updateGroupBeta(bAdoptedCUDepths);
+  getAdoptedDepthsRight(pcColocatedCU, bAdoptedCUDepths, R);
+  updateGroupBeta(bAdoptedCUDepths);
+  getAdoptedDepthsBottom(pcColocatedCU, bAdoptedCUDepths, R);
+  updateGroupBeta(bAdoptedCUDepths);
+
+  delete bAdoptedCUDepths;
+}
+
+/** determine if the depths adopted by group alpha are the same depths to be adopted by group beta
+*\returns Bool
+*/
+Bool TEncCu::isAlphaEqualBeta()
+{
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    if ((m_uiAlphaDepths[ui] > 0 && m_uiBetaDepths[ui] == 0)
+      || (m_uiAlphaDepths[ui] == 0 && m_uiBetaDepths[ui] > 0))
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/** calculate and return the similarity level as explained in the article by R. Fan
+*\returns UInt
+*/
+UInt TEncCu::getSimLevel()
+{
+  UInt uiCount = 0;
+
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    if (m_uiAlphaDepths[ui] > 0)
+    {
+      uiCount++;
+    }
+  }
+
+  return uiCount;
+}
+
+/** in medium high similarity, indicates whether CTU C is the only CTU to adopt a certain depth level in groups alpha and beta
+/** building groups alpha and beta is a must before running this function
+*\returns Bool
+*/
+Bool TEncCu::isOnlyAdoptedbyC()
+{
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    if (m_bAdoptedByC[ui] && m_uiAlphaDepths[ui] == 1 && m_uiBetaDepths[ui] == 0) // CTU C is included in group alpha
+    {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/** initiliaze the array that holds the final depths to evaluate during the CU splitting process
+*\returns Void
+*/
+Void TEncCu::initRangeDepths()
+{
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    m_bRangeDepths[ui] = false;
+  }
+}
+
+/** perform High Similarity degree
+*\param   pcCU
+*\returns Void
+*/
+Void TEncCu::performHighSim(TComDataCU* pcCU)
+{
+  buildGroupBeta(pcCU);
+  if (isAlphaEqualBeta()) // recheck 
+    // only one depth level is adopted
+  {
+    for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+    {
+      if (m_uiAlphaDepths[ui] > 0)
+      {
+        m_bRangeDepths[ui] = true;
+        break;
+      }
+    }
+  }
+  else
+    // group beta adopts at least one more depth level
+  {
+    if (m_uiAlphaDepths[m_uhTotalDepth - 2] > 0)
+      // the last depth is adopted by alpha, therefore also adopt the depth before last 
+    {
+      m_bRangeDepths[m_uhTotalDepth - 2] = true;
+      m_bRangeDepths[m_uhTotalDepth - 3] = true;
+    }
+    else
+      // the last depth is not adopted by alpha, therefore adopt the succeeding depth 
+    {
+      for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+      {
+        if (m_uiAlphaDepths[ui] > 0)
+        {
+          m_bRangeDepths[ui] = true;
+          m_bRangeDepths[ui + 1] = true;
+          break;
+        }
+      }
+    }
+  }
+}
+
+/** perform Medium High Similarity degree
+*\param   pcCU
+*\returns Void
+*/
+Void TEncCu::performMediumHighSim(TComDataCU* pcCU)
+{
+  buildGroupBeta(pcCU);
+  if (isAlphaEqualBeta() == true)
+  {
+    if (isOnlyAdoptedbyC() == true)
+    {
+      for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+      {
+        if (m_bAdoptedByC[ui] == false && m_uiAlphaDepths[ui] > 0) // CTU C is included in group alpha
+        {
+          m_bRangeDepths[ui] = true;
+        }
+      }
+    }
+    else
+    {
+      for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+      {
+        m_bRangeDepths[ui] = m_uiAlphaDepths[ui] > 0;
+      }
+    }
+  }
+  else
+  {
+    for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+    {
+      m_bRangeDepths[ui] = m_uiAlphaDepths[ui] > 0;
+    }
+    UInt uiMaxOccurences = 0;
+    UInt uiMaxOccurencesIdx;
+    for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)  // Find the most frequent depth that is adopted only by group beta 
+    {
+      if (m_uiAlphaDepths[ui] == 0 && m_uiBetaDepths[ui] > uiMaxOccurences)
+      {
+        uiMaxOccurencesIdx = ui;
+        uiMaxOccurences = m_uiBetaDepths[ui];
+      }
+    }
+    m_bRangeDepths[uiMaxOccurencesIdx] = true;
+  }
+}
+
+/** perform Medium Low Similarity degree
+*\returns Void
+*/
+Void TEncCu::performMediumLowSim()
+{
+  Bool adoptedByAllAlphaCUs = false;
+  UInt adoptedByAllAlphaCUsIdx;
+  Bool adoptedByOneCU = false;
+  UInt adoptedByOneCUIdx;
+
+
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    m_bRangeDepths[ui] = m_uiAlphaDepths[ui] > 0 ? true : false;
+    if (adoptedByAllAlphaCUs == false)
+    {
+      adoptedByAllAlphaCUs = m_uiAlphaDepths[ui] == m_uiSizeAlpha ? true : false;
+      adoptedByAllAlphaCUsIdx = ui;
+    }
+    if (m_uiAlphaDepths[ui] == 1)
+    {
+      if (adoptedByOneCU == false)
+      {
+        adoptedByOneCU = true;
+        adoptedByOneCUIdx = ui;
+      }
+      if (adoptedByOneCU == true && (abs((Int)adoptedByOneCUIdx - (Int)adoptedByAllAlphaCUsIdx) < abs((Int)ui - (Int)adoptedByAllAlphaCUsIdx)))
+      {
+        adoptedByOneCUIdx = ui;
+      }
+    }
+  }
+
+  if (adoptedByAllAlphaCUs == true)
+  {
+    m_bRangeDepths[adoptedByOneCUIdx] = false;
+  }
+}
+
+/** perform Low Similarity degree
+*\returns Void
+*/
+Void TEncCu::performLowSim()
+{
+  // Check if there is one depth with lowest probability
+  UInt uiLowestProbability = m_uhTotalDepth - 1;
+  UInt uiLowestProbabilityIdx; // saves the first index in the array with lowest probability (low depth)
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    m_bRangeDepths[ui] = true; // initialize
+    if (m_uiAlphaDepths[ui] < uiLowestProbability)
+    {
+      uiLowestProbability = m_uiAlphaDepths[ui];
+      uiLowestProbabilityIdx = ui;
+    }
+  }
+  Bool bEqualDepthProbabilities = false;
+  UInt uiCommonLowestProbabilityIdx; // saves the last index in the array with the same lowest probability (high depth)
+  for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
+  {
+    if (m_uiAlphaDepths[ui] == uiLowestProbability && ui != uiLowestProbabilityIdx)
+    {
+      bEqualDepthProbabilities = true;
+      uiCommonLowestProbabilityIdx = ui;
+    }
+  }
+
+  if (bEqualDepthProbabilities == true)
+    // at least two depths with the same lowest probability
+  {
+    UInt uiLow = 0;
+    UInt uiHigh = 0;
+    uiLow += m_bAdoptedByColocated[0] ? 1 : 0;
+    uiLow += m_bAdoptedByColocated[1] ? 1 : 0;
+    uiHigh += m_bAdoptedByColocated[2] ? 1 : 0;
+    if (m_uhTotalDepth - 1 >= 3)
+    {
+      uiHigh += m_bAdoptedByColocated[3] ? 1 : 0;
+    }
+    if (uiLow > uiHigh)
+    {
+      m_bRangeDepths[uiCommonLowestProbabilityIdx] = false;
+    }
+    else
+    {
+      m_bRangeDepths[uiLowestProbabilityIdx] = false;
+    }
+  }
+  else
+    // unique depth with lowest probability
+  {
+    m_bRangeDepths[uiLowestProbabilityIdx] = false;
+  }
+}
 //! \}
