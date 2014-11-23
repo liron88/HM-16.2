@@ -121,6 +121,8 @@ private:
   TComDataCU*   m_pCtuAboveRight;     ///< pointer of above-right CTU.
   TComDataCU*   m_pCtuAbove;          ///< pointer of above CTU.
   TComDataCU*   m_pCtuLeft;           ///< pointer of left CTU
+  TComDataCU*	  m_pCtuRight;          ///< pointer of right CTU
+  TComDataCU*	  m_pCtuBottom;         ///< pointer of bottom CTU
   TComDataCU*   m_apcCUColocated[NUM_REF_PIC_LIST_01];  ///< pointer of temporally colocated CU's for both directions
   TComMvField   m_cMvFieldA;          ///< motion vector of position A
   TComMvField   m_cMvFieldB;          ///< motion vector of position B
@@ -399,6 +401,8 @@ public:
   TComDataCU*   getCtuAbove                 () { return m_pCtuAbove;      }
   TComDataCU*   getCtuAboveLeft             () { return m_pCtuAboveLeft;  }
   TComDataCU*   getCtuAboveRight            () { return m_pCtuAboveRight; }
+  TComDataCU*	  getCtuRight                 () { return m_pCtuRight; }
+  TComDataCU*	  getCtuBottom                () { return m_pCtuBottom; }
   TComDataCU*   getCUColocated              ( RefPicList eRefPicList ) { return m_apcCUColocated[eRefPicList]; }
   Bool          CUIsFromSameSlice           ( const TComDataCU *pCU /* Can be NULL */) const { return ( pCU!=NULL && pCU->getSlice()->getSliceCurStartCtuTsAddr() == getSlice()->getSliceCurStartCtuTsAddr() ); }
   Bool          CUIsFromSameTile            ( const TComDataCU *pCU /* Can be NULL */) const;
