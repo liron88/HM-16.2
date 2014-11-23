@@ -194,6 +194,8 @@ protected:
   Bool      m_useRDOQ;
   Bool      m_useRDOQTS;
   UInt      m_rdPenalty;
+  Bool      m_bUseSimilarityBasedDecision;
+  UInt      m_uiR;
   Bool      m_bUseFastEnc;
   Bool      m_bUseEarlyCU;
   Bool      m_useFastDecisionForMerge;
@@ -513,18 +515,20 @@ public:
   Void      setUseHADME                     ( Bool  b )     { m_bUseHADME   = b; }
   Void      setUseRDOQ                      ( Bool  b )     { m_useRDOQ    = b; }
   Void      setUseRDOQTS                    ( Bool  b )     { m_useRDOQTS  = b; }
-  Void      setRDpenalty                 ( UInt  b )     { m_rdPenalty  = b; }
+  Void      setRDpenalty                    ( UInt  b )     { m_rdPenalty  = b; }
+  Void      setUseSBD                       ( Bool  b )     { m_bUseSimilarityBasedDecision = b; }
+  Void      setR                            ( UInt  r )     { m_uiR = r; }
   Void      setUseFastEnc                   ( Bool  b )     { m_bUseFastEnc = b; }
   Void      setUseEarlyCU                   ( Bool  b )     { m_bUseEarlyCU = b; }
   Void      setUseFastDecisionForMerge      ( Bool  b )     { m_useFastDecisionForMerge = b; }
-  Void      setUseCbfFastMode            ( Bool  b )     { m_bUseCbfFastMode = b; }
+  Void      setUseCbfFastMode               ( Bool  b )     { m_bUseCbfFastMode = b; }
   Void      setUseEarlySkipDetection        ( Bool  b )     { m_useEarlySkipDetection = b; }
   Void      setUseConstrainedIntraPred      ( Bool  b )     { m_bUseConstrainedIntraPred = b; }
   Void      setPCMInputBitDepthFlag         ( Bool  b )     { m_bPCMInputBitDepthFlag = b; }
   Void      setPCMFilterDisableFlag         ( Bool  b )     {  m_bPCMFilterDisableFlag = b; }
   Void      setUsePCM                       ( Bool  b )     {  m_usePCM = b;               }
   Void      setPCMLog2MaxSize               ( UInt u )      { m_pcmLog2MaxSize = u;      }
-  Void      setPCMLog2MinSize               ( UInt u )     { m_uiPCMLog2MinSize = u;      }
+  Void      setPCMLog2MinSize               ( UInt u )      { m_uiPCMLog2MinSize = u;      }
   Void      setdQPs                         ( Int*  p )     { m_aidQP       = p; }
   Void      setDeltaQpRD                    ( UInt  u )     {m_uiDeltaQpRD  = u; }
   Bool      getUseASR                       ()      { return m_bUseASR;     }
@@ -532,6 +536,8 @@ public:
   Bool      getUseRDOQ                      ()      { return m_useRDOQ;    }
   Bool      getUseRDOQTS                    ()      { return m_useRDOQTS;  }
   Int       getRDpenalty                    ()      { return m_rdPenalty;  }
+  Bool      getUseSBD                       ()      { return m_bUseSimilarityBasedDecision; }
+  UInt      getR                            ()      { return m_uiR; }
   Bool      getUseFastEnc                   ()      { return m_bUseFastEnc; }
   Bool      getUseEarlyCU                   ()      { return m_bUseEarlyCU; }
   Bool      getUseFastDecisionForMerge      ()      { return m_useFastDecisionForMerge; }
