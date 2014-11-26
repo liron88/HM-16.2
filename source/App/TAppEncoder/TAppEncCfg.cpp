@@ -2179,6 +2179,11 @@ Void TAppEncCfg::xCheckParameter()
     xConfirmPara(m_timeCodeSEINumTs > MAX_TIMECODE_SEI_SETS, "Number of time sets cannot exceed 3");
   }
 
+  if (m_bUseSimilarityBasedDecision)
+  {
+    xConfirmPara(m_uiR != 8 && m_uiR != 16 && m_uiR != 32 && m_uiR != 64, "Depth Extracting Region (R) must be 8, 16, 32 or 64 when Similarity Based Decision (SBD) is turned on");
+  }
+
 #undef xConfirmPara
   if (check_failed)
   {
@@ -2342,6 +2347,8 @@ Void TAppEncCfg::xPrintParameter()
   printf("RDpenalty:%d ", m_rdPenalty  );
   printf("SQP:%d ", m_uiDeltaQpRD         );
   printf("ASR:%d ", m_bUseASR             );
+  printf("SBD:%d ", m_bUseSimilarityBasedDecision);
+  printf("R:%d", m_uiR);
   printf("FEN:%d ", m_bUseFastEnc         );
   printf("ECU:%d ", m_bUseEarlyCU         );
   printf("FDM:%d ", m_useFastDecisionForMerge );
