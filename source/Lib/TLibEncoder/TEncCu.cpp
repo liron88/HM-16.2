@@ -422,7 +422,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
   m_ppcOrigYuv[uiDepth]->copyFromPicYuv( pcPic->getPicYuvOrg(), rpcBestCU->getCtuRsAddr(), rpcBestCU->getZorderIdxInCtu() );
 
   // variable for Similarity Based Decision by R. Fan
-  Bool    bSBD = ((m_pcEncCfg->getUseSBD() && m_bRangeDepths[uiDepth] && rpcBestCU->getSlice()->getSliceType() != I_SLICE) || !m_pcEncCfg->getUseSBD()) ? true : false;
+  Bool    bSBD = ((m_pcEncCfg->getUseSBD() && m_bRangeDepths[uiDepth] && rpcBestCU->getSlice()->getSliceType() != I_SLICE) || !m_pcEncCfg->getUseSBD() || rpcBestCU->getSlice()->getSliceType() == I_SLICE) ? true : false;
 
   // variable for Early CU determination
   Bool    bSubBranch = true;
