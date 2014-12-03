@@ -70,6 +70,7 @@ Void TEncCu::create(UChar uhTotalDepth, UInt uiMaxWidth, UInt uiMaxHeight, Chrom
   m_uiBetaDepths  = new UInt[m_uhTotalDepth - 1];
   m_bRangeDepths  = new Bool[m_uhTotalDepth - 1];
   m_bAdoptedByC   = new Bool[m_uhTotalDepth - 1];
+  m_bAdoptedByColocated = new Bool[m_uhTotalDepth - 1];
   m_uiSizeAlpha   = 0;
 
   m_ppcPredYuvBest = new TComYuv*[m_uhTotalDepth-1];
