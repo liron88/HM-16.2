@@ -2389,27 +2389,45 @@ Void TEncCu::performMediumLowSim()
 
   for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)
   {
-    m_bRangeDepths[ui] = m_uiAlphaDepths[ui] > 0 ? true : false;
-    if (adoptedByAllAlphaCUs == false)
+    if (m_uiAlphaDepths[ui] > 0)
     {
-      adoptedByAllAlphaCUs = m_uiAlphaDepths[ui] == m_uiSizeAlpha ? true : false;
-      adoptedByAllAlphaCUsIdx = ui;
+      m_bRangeDepths[ui] = true;
     }
-    if (m_uiAlphaDepths[ui] == 1)
+    else
     {
-      if (adoptedByOneCU == false)
+      m_bRangeDepths[ui] = false;
+      continue;
+    }
+    if (m_uiSizeAlpha == 1)
+      // if the size of group alpha is 1 (i.e. only the colocated CTU), then all three depth levels possess
+      // the same probability (=1). hence, it’s difficult to eliminate one more depth level for the current
+      // CTU because the current CTU tends to adopt all three depth levels
+    {
+      continue;
+    }
+    else
+    {
+      if (adoptedByAllAlphaCUs == false)
       {
-        adoptedByOneCU = true;
-        adoptedByOneCUIdx = ui;
+        adoptedByAllAlphaCUs = m_uiAlphaDepths[ui] == m_uiSizeAlpha ? true : false;
+        adoptedByAllAlphaCUsIdx = ui;
       }
-      if (adoptedByOneCU == true && (abs((Int)adoptedByOneCUIdx - (Int)adoptedByAllAlphaCUsIdx) < abs((Int)ui - (Int)adoptedByAllAlphaCUsIdx)))
+      if (m_uiAlphaDepths[ui] == 1)
       {
-        adoptedByOneCUIdx = ui;
+        if (adoptedByOneCU == false)
+        {
+          adoptedByOneCU = true;
+          adoptedByOneCUIdx = ui;
+        }
+        if (adoptedByOneCU == true && (abs((Int)adoptedByOneCUIdx - (Int)adoptedByAllAlphaCUsIdx) < abs((Int)ui - (Int)adoptedByAllAlphaCUsIdx)))
+        {
+          adoptedByOneCUIdx = ui;
+        }
       }
     }
   }
 
-  if (adoptedByAllAlphaCUs == true)
+  if (adoptedByAllAlphaCUs == true && adoptedByOneCU == true)
   {
     m_bRangeDepths[adoptedByOneCUIdx] = false;
   }
