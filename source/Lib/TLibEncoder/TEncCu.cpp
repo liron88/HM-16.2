@@ -2367,12 +2367,17 @@ Void TEncCu::performMediumHighSim(TComDataCU* pcCU)
     for (UInt ui = 0; ui < m_uhTotalDepth - 1; ui++)  // Find the most frequent depth that is adopted only by group beta 
     {
       if (m_uiAlphaDepths[ui] == 0 && m_uiBetaDepths[ui] > uiMaxOccurences)
+        // only happens if group beta adopts more depths than group alpha
       {
         uiMaxOccurencesIdx = ui;
         uiMaxOccurences = m_uiBetaDepths[ui];
       }
     }
-    m_bRangeDepths[uiMaxOccurencesIdx] = true;
+    if (uiMaxOccurences > 0)
+      // make sure that group beta adopts more depths than group alpha
+    {
+      m_bRangeDepths[uiMaxOccurencesIdx] = true;
+    }
   }
 }
 
