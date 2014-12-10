@@ -172,6 +172,8 @@ Void TAppEncTop::xInitLibCfg()
   m_cTEncTop.setQuadtreeTULog2MinSize                             ( m_uiQuadtreeTULog2MinSize );
   m_cTEncTop.setQuadtreeTUMaxDepthInter                           ( m_uiQuadtreeTUMaxDepthInter );
   m_cTEncTop.setQuadtreeTUMaxDepthIntra                           ( m_uiQuadtreeTUMaxDepthIntra );
+  m_cTEncTop.setUseSBD                                            ( m_bUseSimilarityBasedDecision );
+  m_cTEncTop.setR                                                 ( m_uiR );
   m_cTEncTop.setUseFastEnc                                        ( m_bUseFastEnc  );
   m_cTEncTop.setUseEarlyCU                                        ( m_bUseEarlyCU  );
   m_cTEncTop.setUseFastDecisionForMerge                           ( m_useFastDecisionForMerge  );
