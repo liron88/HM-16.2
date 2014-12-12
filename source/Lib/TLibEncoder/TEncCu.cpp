@@ -84,13 +84,13 @@ Void TEncCu::create(UChar uhTotalDepth, UInt uiMaxWidth, UInt uiMaxHeight, Chrom
     // *---*---*---*---*---*
     m_bAdoptedDepths64x64 = new Bool[5];
     m_uiAdoptedDepths_a = new UInt[m_uhTotalDepth - 2];
-    m_uiAdoptedDepthsDiagonl_a = new UInt[m_uhTotalDepth - 2];
+    m_uiAdoptedDepthsDiagonal_a = new UInt[m_uhTotalDepth - 2];
     m_uiAdoptedDepths_b = new UInt[m_uhTotalDepth - 2];
-    m_uiAdoptedDepthsDiagonl_b = new UInt[m_uhTotalDepth - 2];
+    m_uiAdoptedDepthsDiagonal_b = new UInt[m_uhTotalDepth - 2];
     m_uiAdoptedDepths_c = new UInt[m_uhTotalDepth - 2];
-    m_uiAdoptedDepthsDiagonl_c = new UInt[m_uhTotalDepth - 2];
+    m_uiAdoptedDepthsDiagonal_c = new UInt[m_uhTotalDepth - 2];
     m_uiAdoptedDepths_d = new UInt[m_uhTotalDepth - 2];
-    m_uiAdoptedDepthsDiagonl_d = new UInt[m_uhTotalDepth - 2];
+    m_uiAdoptedDepthsDiagonal_d = new UInt[m_uhTotalDepth - 2];
   }
 
   m_ppcPredYuvBest = new TComYuv*[m_uhTotalDepth-1];
@@ -213,6 +213,51 @@ Void TEncCu::destroy()
   {
     delete[] m_bAdoptedByColocated;
     m_bAdoptedByColocated = NULL;
+  }
+  if (m_bAdoptedDepths64x64)
+  {
+    delete[] m_bAdoptedDepths64x64;
+    m_bAdoptedDepths64x64 = NULL;
+  }
+  if (m_uiAdoptedDepths_a)
+  {
+    delete[] m_uiAdoptedDepths_a;
+    m_uiAdoptedDepths_a = NULL;
+  }
+  if (m_uiAdoptedDepthsDiagonal_a)
+  {
+    delete[] m_uiAdoptedDepthsDiagonal_a;
+    m_uiAdoptedDepthsDiagonal_a = NULL;
+  }
+  if (m_uiAdoptedDepths_b)
+  {
+    delete[] m_uiAdoptedDepths_b;
+    m_uiAdoptedDepths_b = NULL;
+  }
+  if (m_uiAdoptedDepthsDiagonal_b)
+  {
+    delete[] m_uiAdoptedDepthsDiagonal_b;
+    m_uiAdoptedDepthsDiagonal_b = NULL;
+  }
+  if (m_uiAdoptedDepths_c)
+  {
+    delete[] m_uiAdoptedDepths_c;
+    m_uiAdoptedDepths_c = NULL;
+  }
+  if (m_uiAdoptedDepthsDiagonal_c)
+  {
+    delete[] m_uiAdoptedDepthsDiagonal_c;
+    m_uiAdoptedDepthsDiagonal_c = NULL;
+  }
+  if (m_uiAdoptedDepths_d)
+  {
+    delete[] m_uiAdoptedDepths_d;
+    m_uiAdoptedDepths_d = NULL;
+  }
+  if (m_uiAdoptedDepthsDiagonal_d)
+  {
+    delete[] m_uiAdoptedDepthsDiagonal_d;
+    m_uiAdoptedDepthsDiagonal_d = NULL;
   }
 
   if(m_ppcPredYuvBest)

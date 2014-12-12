@@ -79,6 +79,17 @@ private:
   UInt                    m_uiSizeAlpha;    ///< Size of group alpha for the current CTU 
                                             ///< Used in Medium Low similarity
 
+  // -- RRSP-related variables -- //
+  Bool*                   m_bAdoptedDepths64x64; ///< Array of neighbor CTUs that adopt 64x64
+  UInt*                   m_uiAdoptedDepths_a;   ///< Array of depths adopted by CUs in a's reduced region
+  UInt*                   m_uiAdoptedDepthsDiagonal_a; ///< Array of depths adopted by diagonal CUs in a's reduced region
+  UInt*                   m_uiAdoptedDepths_b;   ///< Array of depths adopted by CUs in b's reduced region
+  UInt*                   m_uiAdoptedDepthsDiagonal_b; ///< Array of depths adopted by diagonal CUs in b's reduced region
+  UInt*                   m_uiAdoptedDepths_c;   ///< Array of depths adopted by CUs in c's reduced region
+  UInt*                   m_uiAdoptedDepthsDiagonal_c; ///< Array of depths adopted by diagonal CUs in c's reduced region
+  UInt*                   m_uiAdoptedDepths_d;   ///< Array of depths adopted by CUs in d's reduced region
+  UInt*                   m_uiAdoptedDepthsDiagonal_d; ///< Array of depths adopted by diagonal CUs in d's reduced region
+
   TComYuv**               m_ppcPredYuvBest; ///< Best Prediction Yuv for each depth
   TComYuv**               m_ppcResiYuvBest; ///< Best Residual Yuv for each depth
   TComYuv**               m_ppcRecoYuvBest; ///< Best Reconstruction Yuv for each depth
