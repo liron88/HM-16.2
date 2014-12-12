@@ -2534,6 +2534,9 @@ Void TEncCu::performLowSim()
   }
 }
 
+/** RRSP: updates the array that contains booleans whether neighbor CTUs adopt 64x64 CU size
+*\returns Void
+*/
 Void TEncCu::Evaluate64x64(TComDataCU* pcCU)
 {
   for (UInt ui = 0; ui < 5; ui++)
@@ -2571,8 +2574,5 @@ Void TEncCu::Evaluate64x64(TComDataCU* pcCU)
     m_bAdoptedDepths64x64[I] = ColocatedCU->getDepth(0) == 0;  // 64x64, no matter which 8x8 CU is picked
   }
 
-
-    
-  
 }
 //! \}

@@ -819,9 +819,10 @@ struct TComSEIMasteringDisplay
   UShort    primaries[3][2];
   UShort    whitePoint[2];
 };
-//! \}
-
-#endif
 
 // RRSP-related Defines
 typedef enum NeighborCU { A = 0, B, C, D, I };
+
+//! \}
+
+#endif

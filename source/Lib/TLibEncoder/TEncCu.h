@@ -79,9 +79,9 @@ private:
   UInt                    m_uiSizeAlpha;    ///< Size of group alpha for the current CTU 
                                             ///< Used in Medium Low similarity
 
-  // -- RRSP-related variables -- //
+  // RRSP-related Variables
   Bool*                   m_bAdoptedDepths64x64; ///< Array of neighbor CTUs that adopt 64x64
-  UInt*                   m_uiReducedAdoptedDepths;   ///< Array of depths adopted by CUs in the reduced region
+  UInt*                   m_uiReducedAdoptedDepths; ///< Array of depths adopted by CUs in the reduced region
   UInt*                   m_uiReducedAdoptedDepthsDiagonal; ///< Array of depths adopted by diagonal CUs in the reduced region
   Bool*                   m_bReducedRangeDepths; ///< Array of depths to evaluate in the current reduced region
 
