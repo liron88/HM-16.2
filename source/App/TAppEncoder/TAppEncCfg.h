@@ -199,6 +199,7 @@ protected:
   Int       m_iFastSearch;                                    ///< ME mode, 0 = full, 1 = diamond, 2 = PMVFAST
   Int       m_iSearchRange;                                   ///< ME search range
   Int       m_bipredSearchRange;                              ///< ME search range for bipred refinement
+  Bool      m_bUseReducedRegionSimilarityPartitioning;        ///< flag for using Reduced Region Similarity Partitioning
   Bool      m_bUseSimilarityBasedDecision;                    ///< flag for using Similarity Based Decision Algorithm by R. Fan
   UInt      m_uiR;                                            ///< Extraction Region for SBD by R. Fan
   Bool      m_bUseFastEnc;                                    ///< flag for using fast encoder setting

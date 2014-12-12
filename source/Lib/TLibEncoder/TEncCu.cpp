@@ -76,7 +76,7 @@ Void TEncCu::create(UChar uhTotalDepth, UInt uiMaxWidth, UInt uiMaxHeight, Chrom
     m_uiSizeAlpha = 0;
   }
 
-  if ((m_pcEncCfg->getUseRRSP())
+  if (m_pcEncCfg->getUseRRSP())
   {
     // m_bAdoptedDepths64x64 structure
     // *---*---*---*---*---* 
