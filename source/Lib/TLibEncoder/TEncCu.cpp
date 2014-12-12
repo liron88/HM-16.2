@@ -66,12 +66,32 @@ Void TEncCu::create(UChar uhTotalDepth, UInt uiMaxWidth, UInt uiMaxHeight, Chrom
   m_ppcBestCU      = new TComDataCU*[m_uhTotalDepth-1];
   m_ppcTempCU      = new TComDataCU*[m_uhTotalDepth-1];
 
-  m_uiAlphaDepths = new UInt[m_uhTotalDepth - 1];
-  m_uiBetaDepths  = new UInt[m_uhTotalDepth - 1];
-  m_bRangeDepths  = new Bool[m_uhTotalDepth - 1];
-  m_bAdoptedByC   = new Bool[m_uhTotalDepth - 1];
-  m_bAdoptedByColocated = new Bool[m_uhTotalDepth - 1];
-  m_uiSizeAlpha   = 0;
+  if (m_pcEncCfg->getUseSBD())
+  {
+    m_uiAlphaDepths = new UInt[m_uhTotalDepth - 1];
+    m_uiBetaDepths = new UInt[m_uhTotalDepth - 1];
+    m_bRangeDepths = new Bool[m_uhTotalDepth - 1];
+    m_bAdoptedByC = new Bool[m_uhTotalDepth - 1];
+    m_bAdoptedByColocated = new Bool[m_uhTotalDepth - 1];
+    m_uiSizeAlpha = 0;
+  }
+
+  if ((m_pcEncCfg->getUseRRSP())
+  {
+    // m_bAdoptedDepths64x64 structure
+    // *---*---*---*---*---* 
+    // | A | B | C | D | I |
+    // *---*---*---*---*---*
+    m_bAdoptedDepths64x64 = new Bool[5];
+    m_uiAdoptedDepths_a = new UInt[m_uhTotalDepth - 2];
+    m_uiAdoptedDepthsDiagonl_a = new UInt[m_uhTotalDepth - 2];
+    m_uiAdoptedDepths_b = new UInt[m_uhTotalDepth - 2];
+    m_uiAdoptedDepthsDiagonl_b = new UInt[m_uhTotalDepth - 2];
+    m_uiAdoptedDepths_c = new UInt[m_uhTotalDepth - 2];
+    m_uiAdoptedDepthsDiagonl_c = new UInt[m_uhTotalDepth - 2];
+    m_uiAdoptedDepths_d = new UInt[m_uhTotalDepth - 2];
+    m_uiAdoptedDepthsDiagonl_d = new UInt[m_uhTotalDepth - 2];
+  }
 
   m_ppcPredYuvBest = new TComYuv*[m_uhTotalDepth-1];
   m_ppcResiYuvBest = new TComYuv*[m_uhTotalDepth-1];
