@@ -189,6 +189,11 @@ Void TEncCu::destroy()
     delete[] m_bAdoptedByC;
     m_bAdoptedByC = NULL;
   }
+  if (m_bAdoptedByColocated)
+  {
+    delete[] m_bAdoptedByColocated;
+    m_bAdoptedByColocated = NULL;
+  }
 
   if(m_ppcPredYuvBest)
   {
