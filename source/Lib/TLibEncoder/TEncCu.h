@@ -69,6 +69,15 @@ private:
   TComDataCU**            m_ppcBestCU;      ///< Best CUs in each depth
   TComDataCU**            m_ppcTempCU;      ///< Temporary CUs in each depth
   UChar                   m_uhTotalDepth;
+  UInt*					          m_uiAlphaDepths;  ///< Array of depths adopted by group alpha
+  UInt*                   m_uiBetaDepths;   ///< Array of depths adopted by group beta
+  Bool*                   m_bRangeDepths;   ///< Array of depths to evaluate in the current CTU
+  Bool*                   m_bAdoptedByC;    ///< Array of depths adopted by CTU C. 
+                                            ///< Used in Medium High similarity
+  Bool*                   m_bAdoptedByColocated; ///< Array of depths adopted by Colocated CTU
+                                                 ///< Used in Low similarity
+  UInt                    m_uiSizeAlpha;    ///< Size of group alpha for the current CTU 
+                                            ///< Used in Medium Low similarity
 
   TComYuv**               m_ppcPredYuvBest; ///< Best Prediction Yuv for each depth
   TComYuv**               m_ppcResiYuvBest; ///< Best Residual Yuv for each depth
@@ -170,6 +179,41 @@ protected:
 #endif
 
   Void  xFillPCMBuffer     ( TComDataCU* pCU, TComYuv* pOrgYuv );
+
+  Void  getAdoptedDepthsLeft(TComDataCU* pcCU, Bool* bDepths, UInt R);
+  Void  getAdoptedDepthsAbove(TComDataCU* pcCU, Bool* bDepths, UInt R);
+  Void  getAdoptedDepthsAboveLeft(TComDataCU* pcCU, Bool* bDepths, UInt R);
+  Void  getAdoptedDepthsAboveRight(TComDataCU* pcCU, Bool* bDepths, UInt R);
+  Void  getAdoptedDepthsRight(TComDataCU* pcCU, Bool* bDepths, UInt R);
+  Void  getAdoptedDepthsBottom(TComDataCU* pcCU, Bool* bDepths, UInt R);
+  Void  getAdoptedDepthsColocated(TComDataCU* pcCU, Bool* bDepths, UInt R);
+
+  Void  initGroupAlpha();
+  Void  updateGroupAlpha(Bool* bDepths);
+
+  // builds the array of depths that are adopted by group alpha
+  Void  buildGroupAlpha(TComDataCU* pcCU);
+
+  Void  initGroupBeta();
+  Void  updateGroupBeta(Bool* bDepths);
+
+  // builds the array of depths that are adopted by the extended group beta
+  Void  buildGroupBeta(TComDataCU* pcCU);
+
+  Bool  isAlphaEqualBeta();
+
+  // calculate and return the similarity level as explained in the article by R. Fan
+  UInt  getSimLevel();
+
+  // medium high similarity - returns if a certain depth is only adopted by CTU C in alpha and beta
+  Bool  isOnlyAdoptedbyC();
+
+  Void  initRangeDepths();
+
+  Void  performHighSim(TComDataCU* pcCU);
+  Void  performMediumHighSim(TComDataCU* pcCU);
+  Void  performMediumLowSim();
+  Void  performLowSim();
 };
 
 //! \}

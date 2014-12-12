@@ -96,6 +96,8 @@ TComDataCU::TComDataCU()
   m_pCtuAboveRight     = NULL;
   m_pCtuAbove          = NULL;
   m_pCtuLeft           = NULL;
+  m_pCtuRight          = NULL;
+  m_pCtuBottom         = NULL;
 
   for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)
   {
@@ -208,6 +210,8 @@ Void TComDataCU::create( ChromaFormat chromaFormatIDC, UInt uiNumPartition, UInt
   m_pCtuAboveRight     = NULL;
   m_pCtuAbove          = NULL;
   m_pCtuLeft           = NULL;
+  m_pCtuRight          = NULL;
+  m_pCtuBottom         = NULL;
 
   for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)
   {
@@ -285,6 +289,8 @@ Void TComDataCU::destroy()
   m_pCtuAboveRight     = NULL;
   m_pCtuAbove          = NULL;
   m_pCtuLeft           = NULL;
+  m_pCtuRight          = NULL;
+  m_pCtuBottom         = NULL;
 
 
   for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)
@@ -416,6 +422,8 @@ Void TComDataCU::initCtu( TComPic* pcPic, UInt ctuRsAddr )
   m_pCtuAbove       = NULL;
   m_pCtuAboveLeft   = NULL;
   m_pCtuAboveRight  = NULL;
+  m_pCtuRight       = NULL;
+  m_pCtuBottom      = NULL;
 
 
   for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)
@@ -442,6 +450,17 @@ Void TComDataCU::initCtu( TComPic* pcPic, UInt ctuRsAddr )
   if ( m_pCtuAbove && ( (m_ctuRsAddr%frameWidthInCtus) < (frameWidthInCtus-1) )  )
   {
     m_pCtuAboveRight = pcPic->getCtu( m_ctuRsAddr - frameWidthInCtus + 1 );
+  }
+
+  if ( ( m_ctuRsAddr % frameWidthInCtus ) < ( frameWidthInCtus - 1 ) )
+  {
+    m_pCtuRight = pcPic->getCtu(m_ctuRsAddr + 1);
+  }
+
+  UInt frameHeightInCtus = pcPic->getFrameHeightInCtus();
+  if ( ( m_ctuRsAddr / frameWidthInCtus ) < ( frameHeightInCtus - 1 ) )
+  {
+    m_pCtuBottom = pcPic->getCtu(m_ctuRsAddr + frameWidthInCtus);
   }
 
   for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)
@@ -619,6 +638,9 @@ Void TComDataCU::initSubCU( TComDataCU* pcCU, UInt uiPartUnitIdx, UInt uiDepth, 
   m_pCtuAbove       = pcCU->getCtuAbove();
   m_pCtuAboveLeft   = pcCU->getCtuAboveLeft();
   m_pCtuAboveRight  = pcCU->getCtuAboveRight();
+  m_pCtuRight       = pcCU->getCtuRight();
+  m_pCtuBottom      = pcCU->getCtuBottom();
+
 
   for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)
   {
@@ -691,6 +713,8 @@ Void TComDataCU::copySubCU( TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth )
   m_pCtuAboveRight     = pcCU->getCtuAboveRight();
   m_pCtuAbove          = pcCU->getCtuAbove();
   m_pCtuLeft           = pcCU->getCtuLeft();
+  m_pCtuRight          = pcCU->getCtuRight();
+  m_pCtuBottom         = pcCU->getCtuBottom();
 
   for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)
   {
@@ -740,6 +764,8 @@ Void TComDataCU::copyInterPredInfoFrom    ( TComDataCU* pcCU, UInt uiAbsPartIdx,
   m_pCtuAboveRight     = pcCU->getCtuAboveRight();
   m_pCtuAbove          = pcCU->getCtuAbove();
   m_pCtuLeft           = pcCU->getCtuLeft();
+  m_pCtuRight          = pcCU->getCtuRight();
+  m_pCtuBottom         = pcCU->getCtuBottom();
 
   for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)
   {
@@ -821,6 +847,8 @@ Void TComDataCU::copyPartFrom( TComDataCU* pcCU, UInt uiPartUnitIdx, UInt uiDept
   m_pCtuAboveRight     = pcCU->getCtuAboveRight();
   m_pCtuAbove          = pcCU->getCtuAbove();
   m_pCtuLeft           = pcCU->getCtuLeft();
+  m_pCtuRight          = pcCU->getCtuRight();
+  m_pCtuBottom         = pcCU->getCtuBottom();
 
   for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)
   {
