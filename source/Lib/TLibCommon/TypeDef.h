@@ -823,4 +823,5 @@ struct TComSEIMasteringDisplay
 
 #endif
 
-
+// RRSP-related Defines
+typedef enum NeighborCU { A = 0, B, C, D, I };

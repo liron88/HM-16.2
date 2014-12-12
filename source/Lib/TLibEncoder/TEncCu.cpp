@@ -83,14 +83,9 @@ Void TEncCu::create(UChar uhTotalDepth, UInt uiMaxWidth, UInt uiMaxHeight, Chrom
     // | A | B | C | D | I |
     // *---*---*---*---*---*
     m_bAdoptedDepths64x64 = new Bool[5];
-    m_uiAdoptedDepths_a = new UInt[m_uhTotalDepth - 2];
-    m_uiAdoptedDepthsDiagonal_a = new UInt[m_uhTotalDepth - 2];
-    m_uiAdoptedDepths_b = new UInt[m_uhTotalDepth - 2];
-    m_uiAdoptedDepthsDiagonal_b = new UInt[m_uhTotalDepth - 2];
-    m_uiAdoptedDepths_c = new UInt[m_uhTotalDepth - 2];
-    m_uiAdoptedDepthsDiagonal_c = new UInt[m_uhTotalDepth - 2];
-    m_uiAdoptedDepths_d = new UInt[m_uhTotalDepth - 2];
-    m_uiAdoptedDepthsDiagonal_d = new UInt[m_uhTotalDepth - 2];
+    m_uiReducedAdoptedDepths = new UInt[m_uhTotalDepth - 2];
+    m_uiReducedAdoptedDepthsDiagonal = new UInt[m_uhTotalDepth - 2];
+    m_bReducedRangeDepths = new Bool[m_uhTotalDepth - 2];
   }
 
   m_ppcPredYuvBest = new TComYuv*[m_uhTotalDepth-1];
@@ -219,45 +214,20 @@ Void TEncCu::destroy()
     delete[] m_bAdoptedDepths64x64;
     m_bAdoptedDepths64x64 = NULL;
   }
-  if (m_uiAdoptedDepths_a)
+  if (m_uiReducedAdoptedDepths)
   {
-    delete[] m_uiAdoptedDepths_a;
-    m_uiAdoptedDepths_a = NULL;
+    delete[] m_uiReducedAdoptedDepths;
+    m_uiReducedAdoptedDepths = NULL;
   }
-  if (m_uiAdoptedDepthsDiagonal_a)
+  if (m_uiReducedAdoptedDepthsDiagonal)
   {
-    delete[] m_uiAdoptedDepthsDiagonal_a;
-    m_uiAdoptedDepthsDiagonal_a = NULL;
+    delete[] m_uiReducedAdoptedDepthsDiagonal;
+    m_uiReducedAdoptedDepthsDiagonal = NULL;
   }
-  if (m_uiAdoptedDepths_b)
+  if (m_bReducedRangeDepths)
   {
-    delete[] m_uiAdoptedDepths_b;
-    m_uiAdoptedDepths_b = NULL;
-  }
-  if (m_uiAdoptedDepthsDiagonal_b)
-  {
-    delete[] m_uiAdoptedDepthsDiagonal_b;
-    m_uiAdoptedDepthsDiagonal_b = NULL;
-  }
-  if (m_uiAdoptedDepths_c)
-  {
-    delete[] m_uiAdoptedDepths_c;
-    m_uiAdoptedDepths_c = NULL;
-  }
-  if (m_uiAdoptedDepthsDiagonal_c)
-  {
-    delete[] m_uiAdoptedDepthsDiagonal_c;
-    m_uiAdoptedDepthsDiagonal_c = NULL;
-  }
-  if (m_uiAdoptedDepths_d)
-  {
-    delete[] m_uiAdoptedDepths_d;
-    m_uiAdoptedDepths_d = NULL;
-  }
-  if (m_uiAdoptedDepthsDiagonal_d)
-  {
-    delete[] m_uiAdoptedDepthsDiagonal_d;
-    m_uiAdoptedDepthsDiagonal_d = NULL;
+    delete[] m_bReducedRangeDepths;
+    m_bReducedRangeDepths = NULL;
   }
 
   if(m_ppcPredYuvBest)
@@ -2562,5 +2532,47 @@ Void TEncCu::performLowSim()
   {
     m_bRangeDepths[uiLowestProbabilityIdx] = false;
   }
+}
+
+Void TEncCu::Evaluate64x64(TComDataCU* pcCU)
+{
+  for (UInt ui = 0; ui < 5; ui++)
+  {
+    m_bAdoptedDepths64x64[ui] = false;
+  }
+
+  TComDataCU* LeftCU = pcCU->getCtuLeft();
+  if (LeftCU != NULL)
+  {
+    m_bAdoptedDepths64x64[A] = LeftCU->getDepth(0)==0 ;  // 64x64, no matter which 8x8 CU is picked
+  }
+
+  TComDataCU* AboveCU = pcCU->getCtuAbove();
+  if (AboveCU != NULL)
+  {
+    m_bAdoptedDepths64x64[B] = AboveCU->getDepth(0) == 0;  // 64x64, no matter which 8x8 CU is picked
+  }
+
+  TComDataCU* AboveLeftCU = pcCU->getCtuAboveLeft();
+  if (AboveLeftCU != NULL)
+  {
+    m_bAdoptedDepths64x64[C] = AboveLeftCU->getDepth(0) == 0;  // 64x64, no matter which 8x8 CU is picked
+  }
+
+  TComDataCU* AboveRightCU = pcCU->getCtuAboveRight();
+  if (AboveRightCU != NULL)
+  {
+    m_bAdoptedDepths64x64[D] = AboveRightCU->getDepth(0) == 0;  // 64x64, no matter which 8x8 CU is picked
+  }
+
+  TComDataCU* ColocatedCU = pcCU->getCUColocated(REF_PIC_LIST_0);
+  if (ColocatedCU != NULL)
+  {
+    m_bAdoptedDepths64x64[I] = ColocatedCU->getDepth(0) == 0;  // 64x64, no matter which 8x8 CU is picked
+  }
+
+
+    
+  
 }
 //! \}
