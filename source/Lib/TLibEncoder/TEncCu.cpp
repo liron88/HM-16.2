@@ -322,6 +322,12 @@ Void TEncCu::compressCtu( TComDataCU* pCtu )
     }
   }
 
+  // RRSP-related
+  if (pCtu->getSlice()->getSliceType() != I_SLICE && m_pcEncCfg->getUseRRSP())
+  {
+    Evaluate64x64(pCtu);
+  }
+
   // analysis of CU
   DEBUG_STRING_NEW(sDebug)
 
@@ -464,6 +470,24 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
   // variable for Similarity Based Decision by R. Fan
   Bool    bSBD = ((m_pcEncCfg->getUseSBD() && m_bRangeDepths[uiDepth] && rpcBestCU->getSlice()->getSliceType() != I_SLICE) || !m_pcEncCfg->getUseSBD() || rpcBestCU->getSlice()->getSliceType() == I_SLICE) ? true : false;
 
+  // variables for Reduced Region Similarity Partitioning (RRSP)
+  
+  // Holds true only if 2NxN and Nx2N modes should be checked.
+  // When true, avoids all other modes. Otherwise, does not affect any mode.
+  Bool bPerformOnlyNx2Nand2NxN = false;
+  UInt NumOfAdoptedCTU64x64 = 0;
+  if (m_pcEncCfg->getUseRRSP() && uiDepth == 0 && rpcBestCU->getSlice()->getSliceType() != I_SLICE)
+  {
+    for (UInt ui = 0; ui < 5; ui++)
+    {
+      NumOfAdoptedCTU64x64 += (m_bAdoptedDepths64x64[ui] == true);
+    }
+    if ((m_bAdoptedDepths64x64[C] && m_bAdoptedDepths64x64[D] && NumOfAdoptedCTU64x64 == 2) || (NumOfAdoptedCTU64x64 == 1 && !m_bAdoptedDepths64x64[I]))
+    {
+      bPerformOnlyNx2Nand2NxN = true;
+    }
+  }
+
   // variable for Early CU determination
   Bool    bSubBranch = true;
 
@@ -548,7 +572,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
         rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
 
         // do inter modes, SKIP and 2Nx2N
-        if (rpcBestCU->getSlice()->getSliceType() != I_SLICE)
+        if (rpcBestCU->getSlice()->getSliceType() != I_SLICE && !bPerformOnlyNx2Nand2NxN)
         {
           // 2Nx2N
           if (m_pcEncCfg->getUseEarlySkipDetection())
@@ -595,7 +619,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
           if (rpcBestCU->getSlice()->getSliceType() != I_SLICE)
           {
             // 2Nx2N, NxN
-            if (!((rpcBestCU->getWidth(0) == 8) && (rpcBestCU->getHeight(0) == 8)))
+            if (!((rpcBestCU->getWidth(0) == 8) && (rpcBestCU->getHeight(0) == 8)) && !bPerformOnlyNx2Nand2NxN)
             {
               if (uiDepth == g_uiMaxCUDepth - g_uiAddCUDepth && doNotBlockPu)
               {
@@ -624,7 +648,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
             }
 
             //! Try AMP (SIZE_2NxnU, SIZE_2NxnD, SIZE_nLx2N, SIZE_nRx2N)
-            if (pcPic->getSlice(0)->getSPS()->getAMPAcc(uiDepth))
+            if (pcPic->getSlice(0)->getSPS()->getAMPAcc(uiDepth) && !bPerformOnlyNx2Nand2NxN)
             {
 #if AMP_ENC_SPEEDUP
               Bool bTestAMP_Hor = false, bTestAMP_Ver = false;
@@ -838,18 +862,25 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
   }
 
   // SBD - Once the maximal depth in the selected range is complete, stop splitting
-  Bool bFurtherSplit = true;
+  Bool bSBDSplit = true;
   if (m_pcEncCfg->getUseSBD() && rpcBestCU->getSlice()->getSliceType() != I_SLICE)
   {
-    bFurtherSplit = false;
+    bSBDSplit = false;
     for (UInt ui = uiDepth + 1; ui <= g_uiMaxCUDepth - g_uiAddCUDepth; ui++)
     {
       if (m_bRangeDepths[ui] == true)
       {
-        bFurtherSplit = true;
+        bSBDSplit = true;
         break;
       }
     }
+  }
+
+  Bool bRRSPSplit = true;
+  if (m_pcEncCfg->getUseRRSP() && uiDepth == 0 && rpcBestCU->getSlice()->getSliceType() != I_SLICE && NumOfAdoptedCTU64x64 == 5)
+  {
+    // Move to next CTU
+    bRRSPSplit = false;
   }
 
   for (Int iQP=iMinQP; iQP<=iMaxQP; iQP++)
@@ -859,7 +890,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
     rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
 
     // further split
-    if ( bFurtherSplit && bSubBranch && uiDepth < g_uiMaxCUDepth - g_uiAddCUDepth )
+    if ( bRRSPSplit && bSBDSplit && bSubBranch && uiDepth < g_uiMaxCUDepth - g_uiAddCUDepth)
     {
       UChar       uhNextDepth         = uiDepth+1;
       TComDataCU* pcSubBestPartCU     = m_ppcBestCU[uhNextDepth];
