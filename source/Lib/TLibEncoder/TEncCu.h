@@ -84,6 +84,7 @@ private:
   UInt*                   m_uiReducedAdoptedDepths; ///< Array of depths adopted by CUs in the reduced region
   UInt*                   m_uiReducedAdoptedDepthsDiagonal; ///< Array of depths adopted by diagonal CUs in the reduced region
   Bool*                   m_bReducedRangeDepths; ///< Array of depths to evaluate in the current reduced region
+  UInt                    m_RRSPNumOfAdjacentCTU; ///< How many CTUs are participating in RRSP algorithm for the current CTU
 
   TComYuv**               m_ppcPredYuvBest; ///< Best Prediction Yuv for each depth
   TComYuv**               m_ppcResiYuvBest; ///< Best Residual Yuv for each depth

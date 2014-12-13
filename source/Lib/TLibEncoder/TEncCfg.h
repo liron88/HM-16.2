@@ -517,7 +517,7 @@ public:
   Void      setUseRDOQ                      ( Bool  b )     { m_useRDOQ    = b; }
   Void      setUseRDOQTS                    ( Bool  b )     { m_useRDOQTS  = b; }
   Void      setRDpenalty                    ( UInt  b )     { m_rdPenalty  = b; }
-  Void      setUseRRSP                      ( Bool  b )     { m_bUseReducedRegionSimilarityPartitioning; }
+  Void      setUseRRSP                      ( Bool  b )     { m_bUseReducedRegionSimilarityPartitioning = b; }
   Void      setUseSBD                       ( Bool  b )     { m_bUseSimilarityBasedDecision = b; }
   Void      setR                            ( UInt  r )     { m_uiR = r; }
   Void      setUseFastEnc                   ( Bool  b )     { m_bUseFastEnc = b; }
