@@ -821,8 +821,8 @@ struct TComSEIMasteringDisplay
 };
 
 // RRSP-related Defines
-typedef enum NeighborCU { A = 0, B, C, D, I };
-
+typedef enum NeighborCU  { A = 0, B, C, D, I };
+typedef enum RRSP32x32CU { a = 0, b, c, d    };
 //! \}
 
 #endif

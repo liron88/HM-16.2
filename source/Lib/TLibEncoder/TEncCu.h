@@ -222,7 +222,8 @@ protected:
   Void  performLowSim();
 
   // RRSP-related Functions
-  Void  Evaluate64x64(TComDataCU* pcCU);
+  Void  evaluate64x64(TComDataCU* pcCU);
+  Void  buildSimLevel(TComDataCU* pcCU, UInt uiPartUnitIdx);
 };
 
 //! \}
