@@ -224,6 +224,8 @@ protected:
   // RRSP-related Functions
   Void  evaluate64x64(TComDataCU* pcCU);
   Void  buildSimLevel(TComDataCU* pcCU, UInt uiPartUnitIdx);
+  UInt  getRRSPSimLevel();
+  Void  setReducedRangeDepths(UInt SimLevel);
 };
 
 //! \}

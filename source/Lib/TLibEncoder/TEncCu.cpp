@@ -325,7 +325,7 @@ Void TEncCu::compressCtu( TComDataCU* pCtu )
   // RRSP-related
   if (pCtu->getSlice()->getSliceType() != I_SLICE && m_pcEncCfg->getUseRRSP())
   {
-    Evaluate64x64(pCtu);
+    evaluate64x64(pCtu);
   }
 
   // analysis of CU
@@ -488,6 +488,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
     }
   }
 
+  Bool bRRSP = ((m_pcEncCfg->getUseRRSP() && (uiDepth == 0 || (uiDepth > 0 && m_bReducedRangeDepths[uiDepth - 1] == true)) && rpcBestCU->getSlice()->getSliceType() != I_SLICE) || !m_pcEncCfg->getUseRRSP() || rpcBestCU->getSlice()->getSliceType() == I_SLICE) ? true : false;
+
   // variable for Early CU determination
   Bool    bSubBranch = true;
 
@@ -545,7 +547,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
   if ( ( uiRPelX < rpcBestCU->getSlice()->getSPS()->getPicWidthInLumaSamples() ) &&
        ( uiBPelY < rpcBestCU->getSlice()->getSPS()->getPicHeightInLumaSamples() ) )
   {
-    if (bSBD)
+    if (bSBD || bRRSP)
       // Similarity Based Decision is turned on, perform required inter/intra/SKIP modes
     {
       for (Int iQP = iMinQP; iQP <= iMaxQP; iQP++)
@@ -882,6 +884,21 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
     // Move to next CTU
     bRRSPSplit = false;
   }
+  if (m_pcEncCfg->getUseRRSP() && uiDepth > 0 && rpcBestCU->getSlice()->getSliceType() != I_SLICE)
+  {
+    for (UInt ui = uiDepth + 1; ui <= g_uiMaxCUDepth - g_uiAddCUDepth; ui++)
+    {
+      if (m_bReducedRangeDepths[ui] == true)
+      {
+        break;
+      }
+      if (ui == g_uiMaxCUDepth - g_uiAddCUDepth)
+      {
+        bRRSPSplit = false;
+      }
+    }
+  }
+  
 
   for (Int iQP=iMinQP; iQP<=iMaxQP; iQP++)
   {
@@ -899,13 +916,15 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
       for ( UInt uiPartUnitIdx = 0; uiPartUnitIdx < 4; uiPartUnitIdx++ )
       {
+        pcSubBestPartCU->initSubCU( rpcTempCU, uiPartUnitIdx, uhNextDepth, iQP );           // clear sub partition datas or init.
+        pcSubTempPartCU->initSubCU( rpcTempCU, uiPartUnitIdx, uhNextDepth, iQP );           // clear sub partition datas or init.
+
         // RRSP-related algorithm
         if (uiDepth == 0)
         {
           buildSimLevel(rpcBestCU, uiPartUnitIdx);
+          setReducedRangeDepths(getRRSPSimLevel());
         }
-        pcSubBestPartCU->initSubCU( rpcTempCU, uiPartUnitIdx, uhNextDepth, iQP );           // clear sub partition datas or init.
-        pcSubTempPartCU->initSubCU( rpcTempCU, uiPartUnitIdx, uhNextDepth, iQP );           // clear sub partition datas or init.
 
         if( ( pcSubBestPartCU->getCUPelX() < pcSlice->getSPS()->getPicWidthInLumaSamples() ) && ( pcSubBestPartCU->getCUPelY() < pcSlice->getSPS()->getPicHeightInLumaSamples() ) )
         {
@@ -2839,4 +2858,85 @@ Void TEncCu::buildSimLevel(TComDataCU* pcCU, UInt uiPartUnitIdx)
     }
   }
 }
+
+UInt TEncCu::getRRSPSimLevel()
+{
+  UInt SimLevel = 0;
+  for (UInt ui = 0; ui < m_uhTotalDepth - 2; ui++)
+  {
+    SimLevel += (m_uiReducedAdoptedDepths[ui] > 0) ? 1 : 0;
+  }
+  return SimLevel;
+}
+
+Void TEncCu::setReducedRangeDepths(UInt SimLevel)
+{
+  UInt NumOfAdoptedDiagonalDepths = MAX_UINT;
+  Int IndexToDespose = -1;
+
+  // initialization
+  for (UInt ui = 0; ui < m_uhTotalDepth - 2; ui++)
+  {
+    m_bReducedRangeDepths[ui] = false;
+  }
+
+  switch (SimLevel)
+  {
+    case 0:
+    {
+      for (UInt ui = 0; ui < m_uhTotalDepth - 2; ui++)
+      {
+        m_bReducedRangeDepths[ui] = true;
+      }
+      for (UInt ui = 0; ui < m_uhTotalDepth - 2; ui = ui + 2)
+        // do not check 16x16 mode
+      {
+        if (m_uiReducedAdoptedDepthsDiagonal[ui] > 0 && m_uiReducedAdoptedDepths[ui] == m_uiReducedAdoptedDepthsDiagonal[ui])
+          // current depth is predicted only by diagonal neighboring CUs
+        {
+          if (m_uiReducedAdoptedDepthsDiagonal[ui] < NumOfAdoptedDiagonalDepths)
+          {
+            NumOfAdoptedDiagonalDepths = m_uiReducedAdoptedDepthsDiagonal[ui];
+            IndexToDespose = ui;
+          }
+        }
+      }
+
+      if (IndexToDespose != -1)
+      {
+        m_bReducedRangeDepths[IndexToDespose] = false;
+      }
+      break;
+    }
+    case 1:
+    {
+      for (UInt ui = 0; ui < m_uhTotalDepth - 2; ui++)
+      {
+        if (m_uiReducedAdoptedDepths[ui] > 0)
+        {
+          m_bReducedRangeDepths[ui] = true;
+        }
+        if (m_uiReducedAdoptedDepths[ui] == 1 && m_uiReducedAdoptedDepthsDiagonal[ui] == 1)
+        {
+          m_bReducedRangeDepths[ui] = false;
+        }
+      }
+      break;
+    }
+    case 2:
+    {
+      for (UInt ui = 0; ui < m_uhTotalDepth - 2; ui++)
+      {             
+        m_bReducedRangeDepths[ui] = (m_uiReducedAdoptedDepths[ui] > 0) ? true : false;
+      }
+      break;
+    }
+    default:
+    {
+      assert(0);
+    }
+
+  }
+}
+
 //! \}
