@@ -882,7 +882,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
   {
     for (UInt ui = uiDepth + 1; ui <= g_uiMaxCUDepth - g_uiAddCUDepth; ui++)
     {
-      if (m_bReducedRangeDepths[ui] == true)
+      if (m_bReducedRangeDepths[ui - 1] == true)
       {
         break;
       }
