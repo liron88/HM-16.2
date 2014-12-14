@@ -469,14 +469,14 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
   // Holds true only if 2NxN and Nx2N modes should be checked.
   // When true, avoids all other modes. Otherwise, does not affect any mode.
   Bool bPerformOnlyNx2Nand2NxN = false;
-  UInt NumOfAdoptedCTU64x64 = 0;
+  UInt numOfAdoptedCTU64x64 = 0;
   if (m_pcEncCfg->getUseRRSP() && uiDepth == 0 && rpcBestCU->getSlice()->getSliceType() != I_SLICE)
   {
     for (UInt ui = 0; ui < 5; ui++)
     {
-      NumOfAdoptedCTU64x64 += (m_bAdoptedDepths64x64[ui] == true);
+      numOfAdoptedCTU64x64 += (m_bAdoptedDepths64x64[ui] == true);
     }
-    if ((m_bAdoptedDepths64x64[C] && m_bAdoptedDepths64x64[D] && NumOfAdoptedCTU64x64 == 2) || (NumOfAdoptedCTU64x64 == 1 && !m_bAdoptedDepths64x64[I]))
+    if ((m_bAdoptedDepths64x64[C] && m_bAdoptedDepths64x64[D] && numOfAdoptedCTU64x64 == 2) || (numOfAdoptedCTU64x64 == 1 && !m_bAdoptedDepths64x64[I]))
     {
       bPerformOnlyNx2Nand2NxN = true;
     }
@@ -873,7 +873,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
   }
 
   Bool bRRSPSplit = true;
-  if (m_pcEncCfg->getUseRRSP() && uiDepth == 0 && rpcBestCU->getSlice()->getSliceType() != I_SLICE && NumOfAdoptedCTU64x64 == m_RRSPNumOfAdjacentCTU)
+  if (m_pcEncCfg->getUseRRSP() && uiDepth == 0 && rpcBestCU->getSlice()->getSliceType() != I_SLICE && numOfAdoptedCTU64x64 == m_RRSPNumOfAdjacentCTU)
   {
     // Move to next CTU
     bRRSPSplit = false;
@@ -2596,38 +2596,38 @@ Void TEncCu::evaluate64x64(TComDataCU* pcCU)
   }
   m_RRSPNumOfAdjacentCTU = 0;
 
-  TComDataCU* LeftCU = pcCU->getCtuLeft();
-  if (LeftCU != NULL)
+  TComDataCU* leftCU = pcCU->getCtuLeft();
+  if (leftCU != NULL)
   {
-    m_bAdoptedDepths64x64[A] = LeftCU->getDepth(0)==0 ;  // 64x64, no matter which 8x8 CU is picked
+    m_bAdoptedDepths64x64[A] = leftCU->getDepth(0)==0 ;  // 64x64, no matter which 8x8 CU is picked
     m_RRSPNumOfAdjacentCTU++;
   }
 
-  TComDataCU* AboveCU = pcCU->getCtuAbove();
-  if (AboveCU != NULL)
+  TComDataCU* aboveCU = pcCU->getCtuAbove();
+  if (aboveCU != NULL)
   {
-    m_bAdoptedDepths64x64[B] = AboveCU->getDepth(0) == 0;  // 64x64, no matter which 8x8 CU is picked
+    m_bAdoptedDepths64x64[B] = aboveCU->getDepth(0) == 0;  // 64x64, no matter which 8x8 CU is picked
     m_RRSPNumOfAdjacentCTU++;
   }
 
-  TComDataCU* AboveLeftCU = pcCU->getCtuAboveLeft();
-  if (AboveLeftCU != NULL)
+  TComDataCU* aboveLeftCU = pcCU->getCtuAboveLeft();
+  if (aboveLeftCU != NULL)
   {
-    m_bAdoptedDepths64x64[C] = AboveLeftCU->getDepth(0) == 0;  // 64x64, no matter which 8x8 CU is picked
+    m_bAdoptedDepths64x64[C] = aboveLeftCU->getDepth(0) == 0;  // 64x64, no matter which 8x8 CU is picked
     m_RRSPNumOfAdjacentCTU++;
   }
 
-  TComDataCU* AboveRightCU = pcCU->getCtuAboveRight();
-  if (AboveRightCU != NULL)
+  TComDataCU* aboveRightCU = pcCU->getCtuAboveRight();
+  if (aboveRightCU != NULL)
   {
-    m_bAdoptedDepths64x64[D] = AboveRightCU->getDepth(0) == 0;  // 64x64, no matter which 8x8 CU is picked
+    m_bAdoptedDepths64x64[D] = aboveRightCU->getDepth(0) == 0;  // 64x64, no matter which 8x8 CU is picked
     m_RRSPNumOfAdjacentCTU++;
   }
 
-  TComDataCU* ColocatedCU = pcCU->getCUColocated(REF_PIC_LIST_0);
-  if (ColocatedCU != NULL)
+  TComDataCU* colocatedCU = pcCU->getCUColocated(REF_PIC_LIST_0);
+  if (colocatedCU != NULL)
   {
-    m_bAdoptedDepths64x64[I] = ColocatedCU->getDepth(0) == 0;  // 64x64, no matter which 8x8 CU is picked
+    m_bAdoptedDepths64x64[I] = colocatedCU->getDepth(0) == 0;  // 64x64, no matter which 8x8 CU is picked
     m_RRSPNumOfAdjacentCTU++;
   }
 
@@ -2660,62 +2660,62 @@ Void TEncCu::buildSimLevel(TComDataCU* pcCU, UInt uiPartUnitIdx)
   {
     case a:
     { 
-      TComDataCU* BottomLeftCU = pcCU->getCtuLeft();
-      if (BottomLeftCU != NULL)
+      TComDataCU* bottomLeftCU = pcCU->getCtuLeft();
+      if (bottomLeftCU != NULL)
       {
-        uiDepth = BottomLeftCU->getDepth(212);
+        uiDepth = bottomLeftCU->getDepth(212);
         uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
         m_uiReducedAdoptedDepths[uiTempDepth] += 1;
         m_uiReducedAdoptedDepthsDiagonal[uiTempDepth] += 1;
       }
-      TComDataCU* LeftCU = BottomLeftCU;
-      if (LeftCU != NULL)
+      TComDataCU* leftCU = bottomLeftCU;
+      if (leftCU != NULL)
       {
         for (UInt ui = 84; ui < 148; ui = ui + 32)
         {
           for (UInt uj = 0; uj < 16; uj = uj + 8)
             {
-              uiDepth = LeftCU->getDepth(ui + uj);
+              uiDepth = leftCU->getDepth(ui + uj);
               uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
               m_uiReducedAdoptedDepths[uiTempDepth] += 1;
             }
           }
         }   
-        TComDataCU* AboveLeftCU = pcCU->getCtuAboveLeft();
-        if (AboveLeftCU != NULL)
+        TComDataCU* aboveLeftCU = pcCU->getCtuAboveLeft();
+        if (aboveLeftCU != NULL)
         {
-          uiDepth = AboveLeftCU->getDepth(252);
+          uiDepth = aboveLeftCU->getDepth(252);
           uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
           m_uiReducedAdoptedDepths[uiTempDepth] += 1;
           m_uiReducedAdoptedDepthsDiagonal[uiTempDepth] += 1;
         }
-        TComDataCU* AboveCU = pcCU->getCtuAbove();
-        if (AboveCU != NULL)
+        TComDataCU* aboveCU = pcCU->getCtuAbove();
+        if (aboveCU != NULL)
         {
           for (UInt ui = 168; ui < 200; ui = ui + 16)
           {
             for (UInt uj = 0; uj < 8; uj = uj + 4)
             {
-              uiDepth = AboveCU->getDepth(ui + uj);
+              uiDepth = aboveCU->getDepth(ui + uj);
               uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
               m_uiReducedAdoptedDepths[uiTempDepth] += 1;
             }
           }
         }
-        TComDataCU* AboveRightCU = AboveCU;
-        if (AboveRightCU != NULL)
+        TComDataCU* aboveRightCU = aboveCU;
+        if (aboveRightCU != NULL)
         {
-          uiDepth = AboveRightCU->getDepth(232);
+          uiDepth = aboveRightCU->getDepth(232);
           uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
           m_uiReducedAdoptedDepths[uiTempDepth] += 1;
           m_uiReducedAdoptedDepthsDiagonal[uiTempDepth] += 1;
         }
-        TComDataCU* ColocatedCU = pcCU->getCUColocated(REF_PIC_LIST_0);
-        if (ColocatedCU != NULL)
+        TComDataCU* colocatedCU = pcCU->getCUColocated(REF_PIC_LIST_0);
+        if (colocatedCU != NULL)
         {
           for (UInt ui = 0; ui < 64; ui = ui + 4)
           {
-            uiDepth = ColocatedCU->getDepth(ui);
+            uiDepth = colocatedCU->getDepth(ui);
             uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
             m_uiReducedAdoptedDepths[uiTempDepth] += 1;
           }
@@ -2724,55 +2724,55 @@ Void TEncCu::buildSimLevel(TComDataCU* pcCU, UInt uiPartUnitIdx)
     }
     case b:
     {
-      TComDataCU* BottomLeftCU = NULL;
-      TComDataCU* LeftCU = pcCU;
-      if (LeftCU != NULL)
+      TComDataCU* bottomLeftCU = NULL;
+      TComDataCU* leftCU = pcCU;
+      if (leftCU != NULL)
         {
           for (UInt ui = 20; ui < 84; ui = ui + 32)
           {
             for (UInt uj = 0; uj < 16; uj = uj + 8)
             {
-              uiDepth = LeftCU->getDepth(ui + uj);
+              uiDepth = leftCU->getDepth(ui + uj);
               uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
               m_uiReducedAdoptedDepths[uiTempDepth] += 1;
             }
           }
         }
-        TComDataCU* AboveLeftCU = pcCU->getCtuAbove();
-        if (AboveLeftCU != NULL)
+        TComDataCU* aboveLeftCU = pcCU->getCtuAbove();
+        if (aboveLeftCU != NULL)
         {
-          uiDepth = AboveLeftCU->getDepth(188);
+          uiDepth = aboveLeftCU->getDepth(188);
           uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
           m_uiReducedAdoptedDepths[uiTempDepth] += 1;
           m_uiReducedAdoptedDepthsDiagonal[uiTempDepth] += 1;
         }
-        TComDataCU* AboveCU = pcCU->getCtuAbove();
-        if (AboveCU != NULL)
+        TComDataCU* aboveCU = pcCU->getCtuAbove();
+        if (aboveCU != NULL)
         {
           for (UInt ui = 232; ui < 264; ui = ui + 16)
           {
             for (UInt uj = 0; uj < 8; uj = uj + 4)
             {
-              uiDepth = AboveCU->getDepth(ui + uj);
+              uiDepth = aboveCU->getDepth(ui + uj);
               uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
               m_uiReducedAdoptedDepths[uiTempDepth] += 1;
             }
           }
         }
-        TComDataCU* AboveRightCU = pcCU->getCtuAboveRight();
-        if (AboveRightCU != NULL)
+        TComDataCU* aboveRightCU = pcCU->getCtuAboveRight();
+        if (aboveRightCU != NULL)
         {
-          uiDepth = AboveRightCU->getDepth(168);
+          uiDepth = aboveRightCU->getDepth(168);
           uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
           m_uiReducedAdoptedDepths[uiTempDepth] += 1;
           m_uiReducedAdoptedDepthsDiagonal[uiTempDepth] += 1;
         }
-        TComDataCU* ColocatedCU = pcCU->getCUColocated(REF_PIC_LIST_0);
-        if (ColocatedCU != NULL)
+        TComDataCU* colocatedCU = pcCU->getCUColocated(REF_PIC_LIST_0);
+        if (colocatedCU != NULL)
         {
           for (UInt ui = 64; ui < 128; ui = ui + 4)
           {
-            uiDepth = ColocatedCU->getDepth(ui);
+            uiDepth = colocatedCU->getDepth(ui);
             uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
             m_uiReducedAdoptedDepths[uiTempDepth] += 1;
           }
@@ -2781,55 +2781,55 @@ Void TEncCu::buildSimLevel(TComDataCU* pcCU, UInt uiPartUnitIdx)
     }
     case c:
     {
-      TComDataCU* BottomLeftCU = NULL;
-      TComDataCU* LeftCU = pcCU->getCtuLeft();
-      if (LeftCU != NULL)
+      TComDataCU* bottomLeftCU = NULL;
+      TComDataCU* leftCU = pcCU->getCtuLeft();
+      if (leftCU != NULL)
       {
         for (UInt ui = 212; ui < 276; ui = ui + 32)
         {
           for (UInt uj = 0; uj < 16; uj = uj + 8)
           {
-            uiDepth = LeftCU->getDepth(ui + uj);
+            uiDepth = leftCU->getDepth(ui + uj);
             uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
             m_uiReducedAdoptedDepths[uiTempDepth] += 1;
           }
         }
       }
-      TComDataCU* AboveLeftCU = LeftCU;
-      if (AboveLeftCU != NULL)
+      TComDataCU* aboveLeftCU = leftCU;
+      if (aboveLeftCU != NULL)
       {
-        uiDepth = AboveLeftCU->getDepth(124);
+        uiDepth = aboveLeftCU->getDepth(124);
         uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
         m_uiReducedAdoptedDepths[uiTempDepth] += 1;
         m_uiReducedAdoptedDepthsDiagonal[uiTempDepth] += 1;
       }
-      TComDataCU* AboveCU = pcCU;
-      if (AboveCU != NULL)
+      TComDataCU* aboveCU = pcCU;
+      if (aboveCU != NULL)
       {
         for (UInt ui = 40; ui < 72; ui = ui + 16)
         {
           for (UInt uj = 0; uj < 8; uj = uj + 4)
           {
-            uiDepth = AboveCU->getDepth(ui + uj);
+            uiDepth = aboveCU->getDepth(ui + uj);
             uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
             m_uiReducedAdoptedDepths[uiTempDepth] += 1;
           }
         }
       }
-      TComDataCU* AboveRightCU = pcCU;
-      if (AboveRightCU != NULL)
+      TComDataCU* aboveRightCU = pcCU;
+      if (aboveRightCU != NULL)
       {
-        uiDepth = AboveRightCU->getDepth(104);
+        uiDepth = aboveRightCU->getDepth(104);
         uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
         m_uiReducedAdoptedDepths[uiTempDepth] += 1;
         m_uiReducedAdoptedDepthsDiagonal[uiTempDepth] += 1;
       }
-      TComDataCU* ColocatedCU = pcCU->getCUColocated(REF_PIC_LIST_0);
-      if (ColocatedCU != NULL)
+      TComDataCU* colocatedCU = pcCU->getCUColocated(REF_PIC_LIST_0);
+      if (colocatedCU != NULL)
       {
         for (UInt ui = 128; ui < 192; ui = ui + 4)
         {
-          uiDepth = ColocatedCU->getDepth(ui);
+          uiDepth = colocatedCU->getDepth(ui);
           uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
           m_uiReducedAdoptedDepths[uiTempDepth] += 1;
         }
@@ -2838,55 +2838,55 @@ Void TEncCu::buildSimLevel(TComDataCU* pcCU, UInt uiPartUnitIdx)
     }
     case d:
     {
-      TComDataCU* BottomLeftCU = NULL;
-      TComDataCU* LeftCU = pcCU;
-      if (LeftCU != NULL)
+      TComDataCU* bottomLeftCU = NULL;
+      TComDataCU* leftCU = pcCU;
+      if (leftCU != NULL)
       {
         for (UInt ui = 148; ui < 212; ui = ui + 32)
         {
          for (UInt uj = 0; uj < 16; uj = uj + 8)
           {
-            uiDepth = LeftCU->getDepth(ui + uj);
+            uiDepth = leftCU->getDepth(ui + uj);
             uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
             m_uiReducedAdoptedDepths[uiTempDepth] += 1;
           }
         }
       }
-      TComDataCU* AboveLeftCU = pcCU;
-      if (AboveLeftCU != NULL)
+      TComDataCU* aboveLeftCU = pcCU;
+      if (aboveLeftCU != NULL)
       {
-        uiDepth = AboveLeftCU->getDepth(60);
+        uiDepth = aboveLeftCU->getDepth(60);
         uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
         m_uiReducedAdoptedDepths[uiTempDepth] += 1;
         m_uiReducedAdoptedDepthsDiagonal[uiTempDepth] += 1;
       }
-      TComDataCU* AboveCU = pcCU;
-      if (AboveCU != NULL)
+      TComDataCU* aboveCU = pcCU;
+      if (aboveCU != NULL)
       {
         for (UInt ui = 104; ui < 136; ui = ui + 16)
         {
           for (UInt uj = 0; uj < 8; uj = uj + 4)
           {
-            uiDepth = AboveCU->getDepth(ui + uj);
+            uiDepth = aboveCU->getDepth(ui + uj);
             uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
             m_uiReducedAdoptedDepths[uiTempDepth] += 1;
           }
         }
       }
-      TComDataCU* AboveRightCU = pcCU->getCtuAboveRight();
-      if (AboveRightCU != NULL)
+      TComDataCU* aboveRightCU = pcCU->getCtuAboveRight();
+      if (aboveRightCU != NULL)
       {
-        uiDepth = AboveRightCU->getDepth(40);
+        uiDepth = aboveRightCU->getDepth(40);
         uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
         m_uiReducedAdoptedDepths[uiTempDepth] += 1;
         m_uiReducedAdoptedDepthsDiagonal[uiTempDepth] += 1;
       }
-      TComDataCU* ColocatedCU = pcCU->getCUColocated(REF_PIC_LIST_0);
-      if (ColocatedCU != NULL)
+      TComDataCU* colocatedCU = pcCU->getCUColocated(REF_PIC_LIST_0);
+      if (colocatedCU != NULL)
       {
         for (UInt ui = 192; ui < 256; ui = ui + 4)
         {
-          uiDepth = ColocatedCU->getDepth(ui);
+          uiDepth = colocatedCU->getDepth(ui);
           uiTempDepth = (uiDepth == 0) ? 0 : uiDepth - 1; // indicates the depth adopted by bottomLeft CU according to R=8 
           m_uiReducedAdoptedDepths[uiTempDepth] += 1;
         }
@@ -2902,20 +2902,20 @@ Void TEncCu::buildSimLevel(TComDataCU* pcCU, UInt uiPartUnitIdx)
 
 UInt TEncCu::getRRSPSimLevel()
 {
-  // SimLevel = 0 if all 32x32 and 16x16 and 8x8 are adopted. 
-  // SimLevel = 2 if just one of the above is adopted.
-  UInt SimLevel = 0;
+  // simLevel = 0 if all 32x32 and 16x16 and 8x8 are adopted. 
+  // simLevel = 2 if just one of the above is adopted.
+  UInt simLevel = 0;
   for (UInt ui = 0; ui < m_uhTotalDepth - 2; ui++)
   {
-    SimLevel += (m_uiReducedAdoptedDepths[ui] == 0) ? 1 : 0;
+    simLevel += (m_uiReducedAdoptedDepths[ui] == 0) ? 1 : 0;
   }
-  return SimLevel;
+  return simLevel;
 }
 
 Void TEncCu::setReducedRangeDepths(UInt SimLevel)
 {
-  UInt NumOfAdoptedDiagonalDepths = MAX_UINT;
-  Int IndexToDespose = -1;
+  UInt numOfAdoptedDiagonalDepths = MAX_UINT;
+  Int indexToDespose = -1;
 
   // initialization
   for (UInt ui = 0; ui < m_uhTotalDepth - 2; ui++)
@@ -2937,17 +2937,17 @@ Void TEncCu::setReducedRangeDepths(UInt SimLevel)
         if (m_uiReducedAdoptedDepthsDiagonal[ui] > 0 && m_uiReducedAdoptedDepths[ui] == m_uiReducedAdoptedDepthsDiagonal[ui])
           // current depth is predicted only by diagonal neighboring CUs
         {
-          if (m_uiReducedAdoptedDepthsDiagonal[ui] < NumOfAdoptedDiagonalDepths)
+          if (m_uiReducedAdoptedDepthsDiagonal[ui] < numOfAdoptedDiagonalDepths)
           {
-            NumOfAdoptedDiagonalDepths = m_uiReducedAdoptedDepthsDiagonal[ui];
-            IndexToDespose = ui;
+            numOfAdoptedDiagonalDepths = m_uiReducedAdoptedDepthsDiagonal[ui];
+            indexToDespose = ui;
           }
         }
       }
 
-      if (IndexToDespose != -1)
+      if (indexToDespose != -1)
       {
-        m_bReducedRangeDepths[IndexToDespose] = false;
+        m_bReducedRangeDepths[indexToDespose] = false;
       }
       break;
     }
