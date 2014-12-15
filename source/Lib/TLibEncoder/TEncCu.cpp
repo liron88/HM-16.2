@@ -541,7 +541,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
   if ( ( uiRPelX < rpcBestCU->getSlice()->getSPS()->getPicWidthInLumaSamples() ) &&
        ( uiBPelY < rpcBestCU->getSlice()->getSPS()->getPicHeightInLumaSamples() ) )
   {
-    if (bSBD || bRRSP)
+    if (bSBD && bRRSP)
       // Similarity Based Decision is turned on, perform required inter/intra/SKIP modes
     {
       for (Int iQP = iMinQP; iQP <= iMaxQP; iQP++)
