@@ -2912,7 +2912,7 @@ UInt TEncCu::getRRSPSimLevel()
   return simLevel;
 }
 
-Void TEncCu::setReducedRangeDepths(UInt SimLevel)
+Void TEncCu::setReducedRangeDepths(UInt simLevel)
 {
   UInt numOfAdoptedDiagonalDepths = MAX_UINT;
   Int indexToDespose = -1;
@@ -2923,7 +2923,7 @@ Void TEncCu::setReducedRangeDepths(UInt SimLevel)
     m_bReducedRangeDepths[ui] = false;
   }
 
-  switch (SimLevel)
+  switch (simLevel)
   {
     case 0:
     {
