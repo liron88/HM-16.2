@@ -482,7 +482,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
     }
   }
 
-  Bool bRRSP = ((m_pcEncCfg->getUseRRSP() && (uiDepth == 0 || (uiDepth > 0 && m_bReducedRangeDepths[uiDepth - 1] == true)) && rpcBestCU->getSlice()->getSliceType() != I_SLICE) || !m_pcEncCfg->getUseRRSP() || rpcBestCU->getSlice()->getSliceType() == I_SLICE) ? true : false;
+  Bool bRRSP = ((m_pcEncCfg->getUseRRSP() && ((uiDepth == 0 && numOfAdoptedCTU64x64 > 0) || (uiDepth > 0 && m_bReducedRangeDepths[uiDepth - 1] == true)) && rpcBestCU->getSlice()->getSliceType() != I_SLICE) || !m_pcEncCfg->getUseRRSP() || rpcBestCU->getSlice()->getSliceType() == I_SLICE) ? true : false;
 
   // variable for Early CU determination
   Bool    bSubBranch = true;
