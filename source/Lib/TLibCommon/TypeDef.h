@@ -821,8 +821,10 @@ struct TComSEIMasteringDisplay
 };
 
 // RRSP-related Defines
-typedef enum NeighborCU  { A = 0, B, C, D, I };
-typedef enum RRSP32x32CU { a = 0, b, c, d    };
+typedef enum GroupACTU    { A = 0, B, C, I        };
+typedef enum GroupBCTU    { D = 0, E, F, G, H     };
+typedef enum RRSP32x32CU  { w = 0, x, y, z        };
+typedef enum RRSPSimLevel { LOW = 0, MEDIUM, HIGH };
 //! \}
 
 #endif

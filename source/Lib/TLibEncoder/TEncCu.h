@@ -80,11 +80,15 @@ private:
                                             ///< Used in Medium Low similarity
 
   // RRSP-related Variables
-  Bool*                   m_bAdoptedDepths64x64; ///< Array of neighbor CTUs that adopt 64x64
-  UInt*                   m_uiReducedAdoptedDepths; ///< Array of depths adopted by CUs in the reduced region
-  UInt*                   m_uiReducedAdoptedDepthsDiagonal; ///< Array of depths adopted by diagonal CUs in the reduced region
-  Bool*                   m_bReducedRangeDepths; ///< Array of depths to evaluate in the current reduced region
-  UInt                    m_RRSPNumOfAdjacentCTU; ///< How many CTUs are participating in RRSP algorithm for the current CTU
+  Bool*                   m_bRRSPAdoptedDepths64x64ByA;      ///< Array of CTUs in group A that adopt 64x64
+  Bool*                   m_bRRSPAdoptedDepths64x64ByB;      ///< Array of CTUs in group B that adopt 64x64
+  UInt*                   m_uiRRSPAlphaReducedAdoptedDepths; ///< Array of depths adopted by CUs in the reduced region of group alpha
+  UInt*                   m_uiRRSPBetaReducedAdoptedDepths;  ///< Array of depths adopted by CUs in the reduced region of group alpha
+  Bool*                   m_bReducedRangeDepths;             ///< Array of depths to evaluate in the current reduced region
+  UInt                    m_RRSPNumOfCTUsInA;                ///< How many CTUs are included in group A for the current CTU
+  UInt                    m_RRSPNumOfCTUsInB;                ///< How many CTUs are included in group B for the current CTU
+  UInt                    m_uiRRSPAdoptedBy_c;               ///< Which depth is adopted by CU c 
+                                                             ///< Used in Medium similarity
 
   TComYuv**               m_ppcPredYuvBest; ///< Best Prediction Yuv for each depth
   TComYuv**               m_ppcResiYuvBest; ///< Best Residual Yuv for each depth
@@ -223,10 +227,15 @@ protected:
   Void  performLowSim();
 
   // RRSP-related Functions
-  Void  evaluate64x64(TComDataCU* pcCU);
-  Void  buildSimLevel(TComDataCU* pcCU, UInt uiPartUnitIdx);
+  Void  evaluateGroupA64x64(TComDataCU* pcCU);
+  Void  evaluateGroupB64x64(TComDataCU* pcCU);
+  Void  buildRRSPAlphaGroup(TComDataCU* pcCU, RRSP32x32CU uiPartUnitIdx);
+  Void  buildRRSPBetaGroup(TComDataCU* pcCU, RRSP32x32CU uiPartUnitIdx);
   UInt  getRRSPSimLevel();
   Void  setReducedRangeDepths(UInt SimLevel);
+  Void  performRRSPLowSim();
+  Void  performRRSPMediumSim();
+  Void  performRRSPHighSim();
 };
 
 //! \}
