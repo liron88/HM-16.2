@@ -934,8 +934,12 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
         if (m_pcEncCfg->getUseRRSP() && uiDepth == 0 && rpcBestCU->getSlice()->getSliceType() != I_SLICE)
         {
           buildRRSPAlphaGroup(rpcTempCU, (RRSP32x32CU)uiPartUnitIdx);
-          buildRRSPBetaGroup(rpcTempCU,  (RRSP32x32CU)uiPartUnitIdx);
-          setReducedRangeDepths(getRRSPSimLevel());
+          UInt uiRRSPSimLevel = getRRSPSimLevel();
+          if (uiRRSPSimLevel != 0)
+          {
+            buildRRSPBetaGroup(rpcTempCU, (RRSP32x32CU)uiPartUnitIdx);
+          }
+          setReducedRangeDepths(uiRRSPSimLevel);
         }
 
         if( ( pcSubBestPartCU->getCUPelX() < pcSlice->getSPS()->getPicWidthInLumaSamples() ) && ( pcSubBestPartCU->getCUPelY() < pcSlice->getSPS()->getPicHeightInLumaSamples() ) )
