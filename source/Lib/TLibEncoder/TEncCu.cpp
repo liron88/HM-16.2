@@ -2249,7 +2249,7 @@ Void TEncCu::updateGroupAlpha(Bool* bAdoptedCUDepths)
   {
     if (bAdoptedCUDepths[ui] == true)
     {
-      m_uiAlphaDepths[ui]++; // increase each adopted depth only once for LCU
+      m_uiAlphaDepths[ui]++; // increase each adopted depth only once for the current CTU
       newAlphaCU = true;
     }
   }
@@ -2303,7 +2303,7 @@ Void TEncCu::updateGroupBeta(Bool* bAdoptedCUDepths)
   {
     if (bAdoptedCUDepths[ui] == true)
     {
-      m_uiBetaDepths[ui]++; // increase each adopted depth only once for LCU
+      m_uiBetaDepths[ui]++; // increase each adopted depth only once for the current CTU
     }
   }
 }
