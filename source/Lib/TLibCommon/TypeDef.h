@@ -820,11 +820,46 @@ struct TComSEIMasteringDisplay
   UShort    whitePoint[2];
 };
 
-// RRSP-related Defines
-typedef enum GroupACTU    { A = 0, B, C, I        };
-typedef enum GroupBCTU    { D = 0, E, F, G, H     };
-typedef enum RRSP32x32CU  { w = 0, x, y, z        };
-typedef enum RRSPSimLevel { LOW = 0, MEDIUM, HIGH };
+// RRSP-related Types
+#define NUM_OF_32X32_CTUS_IN_64X64_CTU   4
+#define NUM_OF_8X8_CTUS_IN_32X32_CTU     16
+
+// in a strip of R = 8, 8x8 CUs are adopted in groups of:
+#define CU_8X8_IS_ADOPTED_IN_PAIRS       2
+#define CU_32X32_IS_ADOPTED_IN_FOURSOMES 4
+
+enum RRSPSimLevel 
+{ 
+  LOW    = 0, 
+  MEDIUM = 1, 
+  HIGH   = 2 
+};
+
+enum GroupACTU 
+{ 
+  A = 0, 
+  B = 1, 
+  C = 2, 
+  I = 3 
+};
+
+enum GroupBCTU 
+{ 
+  D = 0, 
+  E = 1, 
+  F = 2, 
+  G = 3, 
+  H = 4 
+};
+
+enum RRSP32x32CU 
+{ 
+  w = 0, 
+  x = 1, 
+  y = 2, 
+  z = 3 
+};
+
 //! \}
 
 #endif
