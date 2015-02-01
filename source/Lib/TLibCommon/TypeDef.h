@@ -823,6 +823,7 @@ struct TComSEIMasteringDisplay
 // RRSP-related Types
 #define NUM_OF_32X32_CTUS_IN_64X64_CTU   4
 #define NUM_OF_8X8_CTUS_IN_32X32_CTU     16
+#define NUM_OF_8X8_CTUS_IN_64X64_CTU     64
 
 // in a strip of R = 8, 8x8 CUs are adopted in groups of:
 #define CU_8X8_IS_ADOPTED_IN_PAIRS       2

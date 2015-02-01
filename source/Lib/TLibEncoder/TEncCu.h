@@ -235,13 +235,11 @@ protected:
   UInt  getNumOf32x32CUsInA   (TComDataCU* pcCU);
   Void  buildRRSPAlphaGroup   (TComDataCU* pcCU, RRSP32x32CU uiPartUnitIdx);
   Void  buildRRSPBetaGroup    (TComDataCU* pcCU, RRSP32x32CU uiPartUnitIdx);
-  Void  buildRRSPGrandfatherCU(TComDataCU* pcCU, RRSP32x32CU uiPartUnitIdx);
   UInt  getRRSPSimLevel       ();
   Void  setReducedRangeDepths (UInt simLevel, TComDataCU* pcCU, RRSP32x32CU uiPartUnitIdx);
   Void  performRRSPLowSim     (TComDataCU* pcCU, RRSP32x32CU uiPartUnitIdx);
   Void  performRRSPMediumSim  (TComDataCU* pcCU, RRSP32x32CU uiPartUnitIdx);
   Void  performRRSPHighSim    (TComDataCU* pcCU, RRSP32x32CU uiPartUnitIdx);
-  Bool  isColocatedAdjacentCTUsAdoptSameDepth(TComDataCU* pcCU, UInt currentDepth);
 };
 
 //! \}
