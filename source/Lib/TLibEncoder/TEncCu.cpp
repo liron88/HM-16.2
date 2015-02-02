@@ -3608,20 +3608,9 @@ Void TEncCu::performRRSPHighSim(TComDataCU* pcCU, RRSP32x32CU uiPartUnitIdx)
           buildRRSPAlphaGroup(pcCU->getCUColocated(REF_PIC_LIST_0), uiPartUnitIdx);
           setReducedRangeDepths(getRRSPSimLevel(), pcCU->getCUColocated(REF_PIC_LIST_0), uiPartUnitIdx);
           isGrandfatherFrameInUse = false; // reset
-          m_bReducedRangeDepths[uiDepthAdoptedByAlpha] = true; // reset
-        }
-        if (isGrandfatherFrameInUse)
-          // the top left CU in each frame has only one member in group alpha - the colocated CU.
-          // in case the grandfather CU adopts only one depth which is different from the adopted depth of the current CU,
-          // then "uiDepthAdoptedByAlpha" in here is a different depth than it was originally intended.
-          // therefore, replace it.
-        {
-          uiDepthAdoptedByAlpha = pcCU->getDepth(uiPartUnitIdx * NUM_OF_8X8_CTUS_IN_64X64_CTU);
-          uiDepthAdoptedByAlpha = (uiDepthAdoptedByAlpha == 0) ? 0 : uiDepthAdoptedByAlpha - 1;
           if (uiDepthAdoptedByAlpha > 0)
           {
-            // similar smaller CUs might combine into a larger CU
-            m_bReducedRangeDepths[uiDepthAdoptedByAlpha - 1] = true;
+            m_bReducedRangeDepths[uiDepthAdoptedByAlpha - 1] = true; // similar smaller CUs might combine into a larger CU
           }
         }
       }
