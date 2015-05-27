@@ -194,6 +194,7 @@ protected:
   Bool      m_useRDOQ;
   Bool      m_useRDOQTS;
   UInt      m_rdPenalty;
+  Bool      m_bUseReducedRegionSimilarityPartitioning; // RRSP
   Bool      m_bUseSimilarityBasedDecision;
   UInt      m_uiR;
   Bool      m_bUseFastEnc;
@@ -516,6 +517,7 @@ public:
   Void      setUseRDOQ                      ( Bool  b )     { m_useRDOQ    = b; }
   Void      setUseRDOQTS                    ( Bool  b )     { m_useRDOQTS  = b; }
   Void      setRDpenalty                    ( UInt  b )     { m_rdPenalty  = b; }
+  Void      setUseRRSP                      ( Bool  b )     { m_bUseReducedRegionSimilarityPartitioning = b; }
   Void      setUseSBD                       ( Bool  b )     { m_bUseSimilarityBasedDecision = b; }
   Void      setR                            ( UInt  r )     { m_uiR = r; }
   Void      setUseFastEnc                   ( Bool  b )     { m_bUseFastEnc = b; }
@@ -536,6 +538,7 @@ public:
   Bool      getUseRDOQ                      ()      { return m_useRDOQ;    }
   Bool      getUseRDOQTS                    ()      { return m_useRDOQTS;  }
   Int       getRDpenalty                    ()      { return m_rdPenalty;  }
+  Bool      getUseRRSP                      ()      { return m_bUseReducedRegionSimilarityPartitioning; }
   Bool      getUseSBD                       ()      { return m_bUseSimilarityBasedDecision; }
   UInt      getR                            ()      { return m_uiR; }
   Bool      getUseFastEnc                   ()      { return m_bUseFastEnc; }

@@ -866,6 +866,7 @@ Bool TAppEncCfg::parseCfg( Int argc, Char* argv[] )
                                                                                                                "\t0: disable")
   ("SEIpictureDigest",                                m_decodedPictureHashSEIEnabled,                       0, "deprecated alias for SEIDecodedPictureHash")
   ("TMVPMode",                                        m_TMVPModeId,                                         1, "TMVP mode 0: TMVP disable for all slices. 1: TMVP enable for all slices (default) 2: TMVP enable for certain slices only")
+  ("RRSP",                                            m_bUseReducedRegionSimilarityPartitioning,        false, "Reduced Region Similarity Partitioning")
   ("SBD",                                             m_bUseSimilarityBasedDecision,                    false, "Similarity Based Fast Coding Unit Depth Algorithm by R. Fan")
   ("DER",                                             m_uiR,                                               8u, "Depth Extraction Region for SBD by R. Fan")
   ("FEN",                                             m_bUseFastEnc,                                    false, "fast encoder setting")
@@ -2347,6 +2348,7 @@ Void TAppEncCfg::xPrintParameter()
   printf("RDpenalty:%d ", m_rdPenalty  );
   printf("SQP:%d ", m_uiDeltaQpRD         );
   printf("ASR:%d ", m_bUseASR             );
+  printf("RRSP:%d ", m_bUseReducedRegionSimilarityPartitioning);
   printf("SBD:%d ", m_bUseSimilarityBasedDecision);
   printf("DER:%d ", m_uiR                 );
   printf("FEN:%d ", m_bUseFastEnc         );
